@@ -1,38 +1,103 @@
-import { useState } from "react";
-import { Sparkles, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sparkles, Eye, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import VideoInput from "@/components/VideoInput";
 import FloatingLens from "@/components/FloatingLens";
 import SimulatedOverlay from "@/components/SimulatedOverlay";
 import HistorySection from "@/components/HistorySection";
 import {
-  mockTranscript,
-  mockSummary,
-  mockQuiz,
-  mockHistory,
-  simulateProcessing,
+  analyzeVideo,
+  generateQuiz,
+  fetchHistory,
+  updateQuizScore,
   VideoAnalysis,
+  QuizQuestion,
 } from "@/lib/mockData";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lensOpen, setLensOpen] = useState(false);
   const [overlayMode, setOverlayMode] = useState(false);
-  const [currentTitle, setCurrentTitle] = useState("Introduction to Machine Learning");
-  const [history] = useState<VideoAnalysis[]>(mockHistory);
+  const [currentAnalysis, setCurrentAnalysis] = useState<VideoAnalysis | null>(null);
+  const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [history, setHistory] = useState<VideoAnalysis[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const data = await fetchHistory();
+      setHistory(data);
+    } catch (e) {
+      console.error("Failed to load history:", e);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const handleAnalyze = async (url: string) => {
     setIsLoading(true);
-    await simulateProcessing();
-    setIsLoading(false);
-    setCurrentTitle("Introduction to Machine Learning");
-    setLensOpen(true);
-    setOverlayMode(true);
+    try {
+      const analysis = await analyzeVideo(url);
+      setCurrentAnalysis(analysis);
+      setLensOpen(true);
+      setOverlayMode(true);
+      setQuiz([]);
+      toast.success("Video analyzed successfully!");
+      loadHistory();
+
+      // Generate quiz in background
+      setQuizLoading(true);
+      try {
+        const quizData = await generateQuiz(analysis.transcript);
+        setQuiz(quizData);
+      } catch (e) {
+        console.error("Quiz generation failed:", e);
+        toast.error("Quiz generation failed, but summary is ready!");
+      } finally {
+        setQuizLoading(false);
+      }
+    } catch (e: any) {
+      console.error("Analysis failed:", e);
+      toast.error(e.message || "Failed to analyze video. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSelectHistory = (analysis: VideoAnalysis) => {
-    setCurrentTitle(analysis.title);
+  const handleSelectHistory = async (analysis: VideoAnalysis) => {
+    setCurrentAnalysis(analysis);
     setLensOpen(true);
     setOverlayMode(true);
+    setQuiz([]);
+
+    // Generate quiz for historical item
+    if (analysis.transcript.length > 0) {
+      setQuizLoading(true);
+      try {
+        const quizData = await generateQuiz(analysis.transcript);
+        setQuiz(quizData);
+      } catch (e) {
+        console.error("Quiz generation failed:", e);
+      } finally {
+        setQuizLoading(false);
+      }
+    }
+  };
+
+  const handleQuizComplete = async (score: number, total: number) => {
+    if (currentAnalysis?.id) {
+      try {
+        await updateQuizScore(currentAnalysis.id, score, total);
+        loadHistory();
+      } catch (e) {
+        console.error("Failed to save quiz score:", e);
+      }
+    }
   };
 
   return (
@@ -48,7 +113,7 @@ const Index = () => {
               EdSpire <span className="text-gradient">Lens</span>
             </h1>
           </div>
-          {lensOpen && (
+          {currentAnalysis && !lensOpen && (
             <button
               onClick={() => setLensOpen(true)}
               className="text-xs px-3 py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity"
@@ -83,21 +148,33 @@ const Index = () => {
         <VideoInput onSubmit={handleAnalyze} isLoading={isLoading} />
 
         {/* Simulated Overlay */}
-        {overlayMode && <SimulatedOverlay videoTitle={currentTitle} />}
+        {overlayMode && currentAnalysis && (
+          <SimulatedOverlay videoTitle={currentAnalysis.video_title} />
+        )}
 
         {/* History */}
-        <HistorySection history={history} onSelect={handleSelectHistory} />
+        {historyLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <HistorySection history={history} onSelect={handleSelectHistory} />
+        )}
       </main>
 
       {/* Floating Lens */}
-      <FloatingLens
-        isOpen={lensOpen}
-        onClose={() => setLensOpen(false)}
-        summary={mockSummary}
-        transcript={mockTranscript}
-        quiz={mockQuiz}
-        videoTitle={currentTitle}
-      />
+      {currentAnalysis && (
+        <FloatingLens
+          isOpen={lensOpen}
+          onClose={() => setLensOpen(false)}
+          summary={currentAnalysis.summary}
+          transcript={currentAnalysis.transcript}
+          quiz={quiz}
+          quizLoading={quizLoading}
+          videoTitle={currentAnalysis.video_title}
+          onQuizComplete={handleQuizComplete}
+        />
+      )}
     </div>
   );
 };
