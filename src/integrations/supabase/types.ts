@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      video_analyses: {
+        Row: {
+          created_at: string
+          duration: string | null
+          id: string
+          quiz: Json | null
+          quiz_score: number | null
+          quiz_total: number | null
+          summary: Json | null
+          transcript: Json | null
+          updated_at: string
+          user_id: string | null
+          video_title: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          duration?: string | null
+          id?: string
+          quiz?: Json | null
+          quiz_score?: number | null
+          quiz_total?: number | null
+          summary?: Json | null
+          transcript?: Json | null
+          updated_at?: string
+          user_id?: string | null
+          video_title?: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          duration?: string | null
+          id?: string
+          quiz?: Json | null
+          quiz_score?: number | null
+          quiz_total?: number | null
+          summary?: Json | null
+          transcript?: Json | null
+          updated_at?: string
+          user_id?: string | null
+          video_title?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

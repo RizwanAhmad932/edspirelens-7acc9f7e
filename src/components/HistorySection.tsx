@@ -24,21 +24,21 @@ const HistorySection = ({ history, onSelect }: HistorySectionProps) => {
           >
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-display font-semibold text-sm text-foreground leading-tight line-clamp-2 group-hover:text-accent transition-colors">
-                {item.title}
+                {item.video_title}
               </h3>
               <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-accent shrink-0 ml-2 transition-colors" />
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              {item.duration} • {item.analyzedAt}
+              {item.duration || "—"} • {new Date(item.created_at).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-3">
               <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
                 {item.summary.length} insights
               </span>
-              {item.quizScore !== undefined && (
+              {item.quiz_score != null && (
                 <span className="text-xs px-2.5 py-1 rounded-full bg-accent/10 text-accent flex items-center gap-1">
                   <Trophy className="h-3 w-3" />
-                  {item.quizScore}/{item.quizTotal}
+                  {item.quiz_score}/{item.quiz_total}
                 </span>
               )}
             </div>
