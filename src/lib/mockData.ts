@@ -12,6 +12,7 @@ export interface VideoAnalysis {
   video_title: string;
   duration: string | null;
   summary: string[];
+  notes: string[];
   transcript: TranscriptSegment[];
   quiz?: QuizQuestion[];
   quiz_score?: number | null;
@@ -24,6 +25,11 @@ export interface QuizQuestion {
   question: string;
   options: string[];
   correctIndex: number;
+}
+
+export interface Flashcard {
+  front: string;
+  back: string;
 }
 
 export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
@@ -40,6 +46,7 @@ export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
     video_title: data.title || "Untitled Video",
     duration: data.duration || null,
     summary: data.summary || [],
+    notes: data.notes || [],
     transcript: data.transcript || [],
     created_at: new Date().toISOString(),
   };
@@ -56,8 +63,21 @@ export async function generateQuiz(transcript: TranscriptSegment[]): Promise<Qui
 
   if (error) throw new Error(error.message || "Failed to generate quiz");
   if (data?.error) throw new Error(data.error);
-
   return data.questions || [];
+}
+
+export async function generateFlashcards(transcript: TranscriptSegment[]): Promise<Flashcard[]> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: {
+      videoUrl: "",
+      action: "generate-flashcards",
+      transcript: transcript.map((s) => s.text).join(" "),
+    },
+  });
+
+  if (error) throw new Error(error.message || "Failed to generate flashcards");
+  if (data?.error) throw new Error(data.error);
+  return data.flashcards || [];
 }
 
 export async function fetchHistory(): Promise<VideoAnalysis[]> {
@@ -65,7 +85,7 @@ export async function fetchHistory(): Promise<VideoAnalysis[]> {
     .from("video_analyses")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(20);
 
   if (error) throw error;
 
@@ -75,6 +95,7 @@ export async function fetchHistory(): Promise<VideoAnalysis[]> {
     video_title: row.video_title,
     duration: row.duration,
     summary: row.summary || [],
+    notes: [],
     transcript: row.transcript || [],
     quiz_score: row.quiz_score,
     quiz_total: row.quiz_total,
@@ -82,16 +103,11 @@ export async function fetchHistory(): Promise<VideoAnalysis[]> {
   }));
 }
 
-export async function updateQuizScore(
-  analysisId: string,
-  score: number,
-  total: number
-): Promise<void> {
+export async function updateQuizScore(analysisId: string, score: number, total: number): Promise<void> {
   const { error } = await supabase
     .from("video_analyses")
     .update({ quiz_score: score, quiz_total: total })
     .eq("id", analysisId);
-
   if (error) throw error;
 }
 

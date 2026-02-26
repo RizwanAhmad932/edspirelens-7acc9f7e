@@ -1,18 +1,24 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import edspireLogo from "@/assets/edspire-logo.png";
 import VideoInput from "@/components/VideoInput";
 import FloatingLens from "@/components/FloatingLens";
-import SimulatedOverlay from "@/components/SimulatedOverlay";
+import YouTubeEmbed from "@/components/YouTubeEmbed";
 import HistorySection from "@/components/HistorySection";
+import ThemeToggle from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
   generateQuiz,
+  generateFlashcards,
   fetchHistory,
   updateQuizScore,
   VideoAnalysis,
   QuizQuestion,
+  Flashcard,
 } from "@/lib/mockData";
 
 const Index = () => {
@@ -22,14 +28,39 @@ const Index = () => {
   const [currentAnalysis, setCurrentAnalysis] = useState<VideoAnalysis | null>(null);
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [history, setHistory] = useState<VideoAnalysis[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    loadHistory();
-  }, []);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        navigate("/auth");
+        return;
+      }
+      setUser(session?.user || null);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+      setUser(session.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (user) loadHistory();
+  }, [user]);
 
   const loadHistory = async () => {
+    setHistoryLoading(true);
     try {
       const data = await fetchHistory();
       setHistory(data);
@@ -48,23 +79,19 @@ const Index = () => {
       setLensOpen(true);
       setOverlayMode(true);
       setQuiz([]);
+      setFlashcards([]);
       toast.success("Video analyzed successfully!");
       loadHistory();
 
-      // Generate quiz in background
-      setQuizLoading(true);
-      try {
-        const quizData = await generateQuiz(analysis.transcript);
-        setQuiz(quizData);
-      } catch (e) {
-        console.error("Quiz generation failed:", e);
-        toast.error("Quiz generation failed, but summary is ready!");
-      } finally {
-        setQuizLoading(false);
+      // Generate quiz + flashcards in background
+      if (analysis.transcript.length > 0) {
+        setQuizLoading(true);
+        setFlashcardsLoading(true);
+        generateQuiz(analysis.transcript).then(q => setQuiz(q)).catch(e => { console.error(e); toast.error("Quiz generation failed"); }).finally(() => setQuizLoading(false));
+        generateFlashcards(analysis.transcript).then(f => setFlashcards(f)).catch(e => console.error(e)).finally(() => setFlashcardsLoading(false));
       }
     } catch (e: any) {
-      console.error("Analysis failed:", e);
-      toast.error(e.message || "Failed to analyze video. Please try again.");
+      toast.error(e.message || "Failed to analyze video.");
     } finally {
       setIsLoading(false);
     }
@@ -75,18 +102,13 @@ const Index = () => {
     setLensOpen(true);
     setOverlayMode(true);
     setQuiz([]);
+    setFlashcards([]);
 
-    // Generate quiz for historical item
     if (analysis.transcript.length > 0) {
       setQuizLoading(true);
-      try {
-        const quizData = await generateQuiz(analysis.transcript);
-        setQuiz(quizData);
-      } catch (e) {
-        console.error("Quiz generation failed:", e);
-      } finally {
-        setQuizLoading(false);
-      }
+      setFlashcardsLoading(true);
+      generateQuiz(analysis.transcript).then(q => setQuiz(q)).catch(e => console.error(e)).finally(() => setQuizLoading(false));
+      generateFlashcards(analysis.transcript).then(f => setFlashcards(f)).catch(e => console.error(e)).finally(() => setFlashcardsLoading(false));
     }
   };
 
@@ -95,11 +117,15 @@ const Index = () => {
       try {
         await updateQuizScore(currentAnalysis.id, score, total);
         loadHistory();
-      } catch (e) {
-        console.error("Failed to save quiz score:", e);
-      }
+      } catch (e) { console.error(e); }
     }
   };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen gradient-surface">
@@ -112,14 +138,21 @@ const Index = () => {
               EdSpire<span className="text-gradient">.AI</span>
             </h1>
           </div>
-          {currentAnalysis && !lensOpen && (
-            <button
-              onClick={() => setLensOpen(true)}
-              className="text-xs px-3 py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity animate-scale-in"
-            >
-              Open Lens
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {currentAnalysis && !lensOpen && (
+              <button
+                onClick={() => setLensOpen(true)}
+                className="text-xs px-3 py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity animate-scale-in"
+              >
+                Open Lens
+              </button>
+            )}
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline text-xs">Sign out</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -138,7 +171,7 @@ const Index = () => {
               <span className="text-gradient">in seconds</span>
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Paste a video link and let EdSpire.AI extract key insights, generate quizzes, and help you learn faster.
+              Paste a video link and let EdSpire.AI extract detailed notes, generate quizzes, flashcards, and help you learn faster.
             </p>
           </div>
         )}
@@ -146,9 +179,9 @@ const Index = () => {
         {/* Video Input */}
         <VideoInput onSubmit={handleAnalyze} isLoading={isLoading} />
 
-        {/* Simulated Overlay */}
+        {/* YouTube Embed */}
         {overlayMode && currentAnalysis && (
-          <SimulatedOverlay videoTitle={currentAnalysis.video_title} />
+          <YouTubeEmbed videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
         )}
 
         {/* History */}
@@ -167,9 +200,12 @@ const Index = () => {
           isOpen={lensOpen}
           onClose={() => setLensOpen(false)}
           summary={currentAnalysis.summary}
+          notes={currentAnalysis.notes}
           transcript={currentAnalysis.transcript}
           quiz={quiz}
           quizLoading={quizLoading}
+          flashcards={flashcards}
+          flashcardsLoading={flashcardsLoading}
           videoTitle={currentAnalysis.video_title}
           onQuizComplete={handleQuizComplete}
         />
