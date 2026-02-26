@@ -7,7 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Extract YouTube video ID from various URL formats
 function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -20,10 +19,8 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-// Fetch YouTube transcript using the innertube API
 async function fetchYouTubeTranscript(videoId: string): Promise<string> {
   try {
-    // Step 1: Get the video page to extract necessary data
     const videoPageResponse = await fetch(
       `https://www.youtube.com/watch?v=${videoId}`,
       {
@@ -33,283 +30,182 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
         },
       }
     );
-
-    if (!videoPageResponse.ok) {
-      throw new Error(`Failed to fetch video page: ${videoPageResponse.status}`);
-    }
-
+    if (!videoPageResponse.ok) throw new Error(`Failed to fetch video page: ${videoPageResponse.status}`);
     const html = await videoPageResponse.text();
-
-    // Extract captions data from the page
     const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
-    if (!captionMatch) {
-      // Try alternative: use timedtext API directly
-      console.log("No captions found in page, trying timedtext API...");
-      return await fetchTimedText(videoId);
-    }
-
+    if (!captionMatch) return await fetchTimedText(videoId);
     const captionTracks = JSON.parse(captionMatch[1]);
-    // Prefer English captions
-    const enTrack = captionTracks.find((t: any) =>
-      t.languageCode === "en" || t.vssId?.includes(".en")
-    ) || captionTracks[0];
-
-    if (!enTrack?.baseUrl) {
-      return await fetchTimedText(videoId);
-    }
-
-    // Fetch the actual caption XML
+    const enTrack = captionTracks.find((t: any) => t.languageCode === "en" || t.vssId?.includes(".en")) || captionTracks[0];
+    if (!enTrack?.baseUrl) return await fetchTimedText(videoId);
     const captionUrl = enTrack.baseUrl.replace(/\\u0026/g, "&");
     const captionResponse = await fetch(captionUrl);
-    if (!captionResponse.ok) {
-      throw new Error("Failed to fetch captions");
-    }
-
-    const captionXml = await captionResponse.text();
-    return parseTranscriptXml(captionXml);
+    if (!captionResponse.ok) throw new Error("Failed to fetch captions");
+    return parseTranscriptXml(await captionResponse.text());
   } catch (error) {
     console.error("Transcript fetch error:", error);
-    // Fallback: try timedtext API
     return await fetchTimedText(videoId);
   }
 }
 
-// Fallback: use YouTube's timedtext API
 async function fetchTimedText(videoId: string): Promise<string> {
   const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=srv3`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    },
-  });
-
+  const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
   if (!response.ok || response.headers.get("content-length") === "0") {
-    // Try auto-generated captions
     const autoUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=srv3`;
-    const autoResponse = await fetch(autoUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
-
-    if (!autoResponse.ok) {
-      throw new Error("No captions available for this video. The video may not have English subtitles.");
-    }
-
+    const autoResponse = await fetch(autoUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!autoResponse.ok) throw new Error("No captions available for this video.");
     const xml = await autoResponse.text();
-    if (!xml || xml.trim().length < 50) {
-      throw new Error("No captions available for this video.");
-    }
+    if (!xml || xml.trim().length < 50) throw new Error("No captions available for this video.");
     return parseTranscriptXml(xml);
   }
-
   const xml = await response.text();
-  if (!xml || xml.trim().length < 50) {
-    throw new Error("No captions available for this video.");
-  }
+  if (!xml || xml.trim().length < 50) throw new Error("No captions available for this video.");
   return parseTranscriptXml(xml);
 }
 
-// Parse XML transcript into plain text
 function parseTranscriptXml(xml: string): string {
   const segments: string[] = [];
-  // Match <text> elements - handles both srv3 and srv1 formats
   const textRegex = /<text[^>]*>([\s\S]*?)<\/text>/g;
   let match;
   while ((match = textRegex.exec(xml)) !== null) {
-    let text = match[1]
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/<[^>]+>/g, "") // Remove any nested tags
-      .trim();
+    let text = match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]+>/g, "").trim();
     if (text) segments.push(text);
   }
-
-  if (segments.length === 0) {
-    throw new Error("Could not parse transcript from captions.");
-  }
-
+  if (segments.length === 0) throw new Error("Could not parse transcript from captions.");
   return segments.join(" ");
 }
 
-// Get video title from YouTube
 async function getVideoTitle(videoId: string): Promise<string> {
   try {
-    const response = await fetch(
-      `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`
-    );
+    const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
     if (response.ok) {
       const data = await response.json();
       if (data.title) return data.title;
     }
-  } catch (e) {
-    console.error("Failed to get video title:", e);
-  }
+  } catch (e) { console.error("Failed to get video title:", e); }
   return "YouTube Video";
 }
 
+function aiCall(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
+  const body: any = { model: "google/gemini-3-flash-preview", messages };
+  if (tools) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
+  return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function handleAIError(response: Response) {
+  if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (response.status === 402) return new Response(JSON.stringify({ error: "Credits required. Please add funds." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return null;
+}
+
+function parseToolResponse(data: any): any {
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall) return JSON.parse(toolCall.function.arguments);
+  const content = data.choices?.[0]?.message?.content || "";
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (jsonMatch) return JSON.parse(jsonMatch[0]);
+  throw new Error("Could not parse AI response");
+}
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const body = await req.json();
     const { videoUrl, action } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get user from auth header
+    const authHeader = req.headers.get("authorization");
+    let userId: string | null = null;
+    if (authHeader) {
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await userClient.auth.getUser();
+      userId = user?.id || null;
+    }
+
     if (action === "analyze") {
       const videoId = extractVideoId(videoUrl);
       if (!videoId) {
-        return new Response(
-          JSON.stringify({ error: "Invalid YouTube URL. Please paste a valid YouTube video link." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Invalid YouTube URL." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Fetch title first, then try transcript (transcript may fail for live/private videos)
       const videoTitle = await getVideoTitle(videoId);
       let transcript: string | null = null;
-      try {
-        transcript = await fetchYouTubeTranscript(videoId);
-        console.log(`Fetched transcript for "${videoTitle}" (${transcript.length} chars)`);
-      } catch (e) {
-        console.warn(`No captions for "${videoTitle}", using title-based analysis:`, e instanceof Error ? e.message : e);
+      try { transcript = await fetchYouTubeTranscript(videoId); } catch (e) {
+        console.warn(`No captions for "${videoTitle}":`, e instanceof Error ? e.message : e);
       }
 
       const hasTranscript = transcript && transcript.length > 50;
 
-      // Generate summary using AI with real transcript
-      const summaryResponse = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are an educational assistant. You analyze video transcripts and provide structured insights. Be thorough and accurate.",
-              },
-              {
-                role: "user",
-                content: hasTranscript
-                  ? `Analyze this YouTube video transcript and provide a detailed JSON response with the following structure:
-{
-  "summary": ["bullet point 1", "bullet point 2", ...],
-  "transcript": [{"timestamp": "0:00", "seconds": 0, "text": "segment text"}, ...],
-  "duration": "estimated duration like 8:30"
-}
+      const summaryResponse = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: "You are an expert educational assistant. Analyze video transcripts and extract comprehensive, detailed study notes as a teacher would write them. Be thorough — capture every concept, example, question, and explanation." },
+          {
+            role: "user",
+            content: hasTranscript
+              ? `Analyze this YouTube video transcript and provide a comprehensive educational breakdown.
 
-Important instructions:
-- Provide 6-10 concise but informative summary bullet points covering ALL key topics
-- Break the transcript into meaningful segments (10-20 segments) with approximate timestamps
-- Each transcript segment should be 1-3 sentences of coherent content
-- The duration should be estimated from the content length
+Return JSON with:
+1. "summary" - 8-15 detailed bullet points covering ALL key topics and concepts
+2. "notes" - 10-25 detailed study notes, each note should be a complete paragraph explaining a concept, formula, example, or key teaching point. Write them like a textbook — thorough and clear.
+3. "transcript" - Break into 15-30 meaningful segments with timestamps
+4. "duration" - Estimated duration
 
 Video title: ${videoTitle}
 
 Transcript:
-${transcript!.substring(0, 15000)}`
-                  : `This YouTube video titled "${videoTitle}" does not have captions available. Based on the title alone, generate an educational analysis with:
-{
-  "summary": ["bullet point 1", "bullet point 2", ...],
-  "transcript": [{"timestamp": "0:00", "seconds": 0, "text": "segment text"}, ...],
-  "duration": "unknown"
-}
-
-Important instructions:
-- Provide 3-5 summary bullet points about what the video likely covers based on its title
-- Create a single transcript segment noting that captions were unavailable
-- Set duration to "unknown"`,
+${transcript!.substring(0, 20000)}`
+              : `Video titled "${videoTitle}" has no captions. Based on the title, generate:
+1. "summary" - 3-5 points about likely topics
+2. "notes" - 2-3 general notes about what the video likely covers
+3. "transcript" - Single segment noting captions unavailable
+4. "duration" - "unknown"`,
+          },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_analysis",
+            description: "Return the structured analysis",
+            parameters: {
+              type: "object",
+              properties: {
+                summary: { type: "array", items: { type: "string" } },
+                notes: { type: "array", items: { type: "string" } },
+                transcript: { type: "array", items: { type: "object", properties: { timestamp: { type: "string" }, seconds: { type: "number" }, text: { type: "string" } }, required: ["timestamp", "seconds", "text"], additionalProperties: false } },
+                duration: { type: "string" },
               },
-            ],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: "return_analysis",
-                  description: "Return the structured analysis of the video transcript",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      summary: { type: "array", items: { type: "string" } },
-                      transcript: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            timestamp: { type: "string" },
-                            seconds: { type: "number" },
-                            text: { type: "string" },
-                          },
-                          required: ["timestamp", "seconds", "text"],
-                          additionalProperties: false,
-                        },
-                      },
-                      duration: { type: "string" },
-                    },
-                    required: ["summary", "transcript", "duration"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-            ],
-            tool_choice: { type: "function", function: { name: "return_analysis" } },
-          }),
-        }
+              required: ["summary", "notes", "transcript", "duration"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_analysis" } }
       );
 
       if (!summaryResponse.ok) {
-        const status = summaryResponse.status;
-        if (status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        if (status === 402) {
-          return new Response(JSON.stringify({ error: "Credits required. Please add funds." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        const errText = await summaryResponse.text();
-        console.error("AI gateway error:", status, errText);
-        throw new Error(`AI gateway error: ${status}`);
+        const errResp = handleAIError(summaryResponse);
+        if (errResp) return errResp;
+        throw new Error(`AI gateway error: ${summaryResponse.status}`);
       }
 
-      const summaryData = await summaryResponse.json();
-      let analysis;
-
-      const toolCall = summaryData.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall) {
-        analysis = JSON.parse(toolCall.function.arguments);
-      } else {
-        const content = summaryData.choices?.[0]?.message?.content || "";
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          analysis = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error("Could not parse AI response");
-        }
-      }
-
-      // Use real video title
+      const analysis = parseToolResponse(await summaryResponse.json());
       analysis.title = videoTitle;
 
-      // Save to database
       const { data: saved, error: saveError } = await supabase
         .from("video_analyses")
         .insert({
@@ -318,132 +214,138 @@ Important instructions:
           duration: analysis.duration,
           summary: analysis.summary,
           transcript: analysis.transcript,
+          user_id: userId,
         })
         .select()
         .single();
 
-      if (saveError) {
-        console.error("Save error:", saveError);
-      }
+      if (saveError) console.error("Save error:", saveError);
 
-      return new Response(
-        JSON.stringify({ ...analysis, id: saved?.id }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ ...analysis, id: saved?.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "generate-quiz") {
       const transcriptText = body.transcript;
-      if (!transcriptText) {
-        return new Response(
-          JSON.stringify({ error: "No transcript provided for quiz generation" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!transcriptText) return new Response(JSON.stringify({ error: "No transcript provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const quizResponse = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: [
-              {
-                role: "system",
-                content: "You are a quiz generator for educational content. Create questions that test genuine understanding of the video content.",
-              },
-              {
-                role: "user",
-                content: `Generate a 5-question multiple-choice quiz based on this video transcript. Each question should:
-- Test understanding of key concepts mentioned in the video
-- Have 4 answer options
-- Have exactly one correct answer
-- Cover different topics from the video
+      const quizResponse = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: "You are a quiz generator. Extract ALL questions that the teacher asks, solves, or discusses in the video. Also create additional comprehension questions. There is NO limit on question count — extract every single question." },
+          {
+            role: "user",
+            content: `Extract ALL questions from this video transcript. Include:
+1. Every question the teacher explicitly asks students
+2. Every problem/example the teacher solves
+3. Every concept-check or discussion question
+4. Additional comprehension questions covering remaining topics
+
+Each question should have 4 options with exactly one correct answer. Do NOT limit to 5 questions — include ALL questions found.
 
 Transcript:
-${transcriptText.substring(0, 10000)}`,
+${transcriptText.substring(0, 15000)}`,
+          },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_quiz",
+            description: "Return all quiz questions",
+            parameters: {
+              type: "object",
+              properties: {
+                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" } }, required: ["id", "question", "options", "correctIndex"], additionalProperties: false } },
               },
-            ],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: "return_quiz",
-                  description: "Return the quiz questions",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      questions: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            id: { type: "string" },
-                            question: { type: "string" },
-                            options: { type: "array", items: { type: "string" } },
-                            correctIndex: { type: "number" },
-                          },
-                          required: ["id", "question", "options", "correctIndex"],
-                          additionalProperties: false,
-                        },
-                      },
-                    },
-                    required: ["questions"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-            ],
-            tool_choice: { type: "function", function: { name: "return_quiz" } },
-          }),
-        }
+              required: ["questions"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_quiz" } }
       );
 
       if (!quizResponse.ok) {
-        const status = quizResponse.status;
-        if (status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        if (status === 402) {
-          return new Response(JSON.stringify({ error: "Credits required." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+        const errResp = handleAIError(quizResponse);
+        if (errResp) return errResp;
         throw new Error(`AI error: ${quizResponse.status}`);
       }
 
-      const quizData = await quizResponse.json();
-      let quiz;
-      const toolCall = quizData.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall) {
-        quiz = JSON.parse(toolCall.function.arguments);
-      } else {
-        const content = quizData.choices?.[0]?.message?.content || "";
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        quiz = jsonMatch ? JSON.parse(jsonMatch[0]) : { questions: [] };
-      }
-
-      return new Response(
-        JSON.stringify(quiz),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const quiz = parseToolResponse(await quizResponse.json());
+      return new Response(JSON.stringify(quiz), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Unknown action" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    if (action === "generate-flashcards") {
+      const transcriptText = body.transcript;
+      if (!transcriptText) return new Response(JSON.stringify({ error: "No transcript provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const fcResponse = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: "Generate study flashcards from educational video content. Cover all key concepts, definitions, formulas, and important facts." },
+          {
+            role: "user",
+            content: `Generate 10-20 study flashcards from this video transcript. Each card should have a "front" (question/term) and "back" (answer/definition). Cover all important concepts.
+
+Transcript:
+${transcriptText.substring(0, 10000)}`,
+          },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_flashcards",
+            description: "Return flashcards",
+            parameters: {
+              type: "object",
+              properties: {
+                flashcards: { type: "array", items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } },
+              },
+              required: ["flashcards"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_flashcards" } }
+      );
+
+      if (!fcResponse.ok) {
+        const errResp = handleAIError(fcResponse);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${fcResponse.status}`);
+      }
+
+      const fc = parseToolResponse(await fcResponse.json());
+      return new Response(JSON.stringify(fc), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "chat") {
+      const { messages, videoTitle: title, transcript: transcriptText } = body;
+
+      const chatResponse = await aiCall(LOVABLE_API_KEY, [
+        {
+          role: "system",
+          content: `You are an AI tutor helping a student understand a video titled "${title}". Use the transcript context below to answer questions accurately and thoroughly. If the answer isn't in the transcript, say so.
+
+Video transcript context:
+${transcriptText || "No transcript available."}`,
+        },
+        ...messages,
+      ]);
+
+      if (!chatResponse.ok) {
+        const errResp = handleAIError(chatResponse);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${chatResponse.status}`);
+      }
+
+      const chatData = await chatResponse.json();
+      const reply = chatData.choices?.[0]?.message?.content || "I couldn't generate a response.";
+      return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("Edge function error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
