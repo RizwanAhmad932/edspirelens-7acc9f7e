@@ -175,13 +175,17 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Fetch real transcript and title in parallel
-      const [transcript, videoTitle] = await Promise.all([
-        fetchYouTubeTranscript(videoId),
-        getVideoTitle(videoId),
-      ]);
+      // Fetch title first, then try transcript (transcript may fail for live/private videos)
+      const videoTitle = await getVideoTitle(videoId);
+      let transcript: string | null = null;
+      try {
+        transcript = await fetchYouTubeTranscript(videoId);
+        console.log(`Fetched transcript for "${videoTitle}" (${transcript.length} chars)`);
+      } catch (e) {
+        console.warn(`No captions for "${videoTitle}", using title-based analysis:`, e instanceof Error ? e.message : e);
+      }
 
-      console.log(`Fetched transcript for "${videoTitle}" (${transcript.length} chars)`);
+      const hasTranscript = transcript && transcript.length > 50;
 
       // Generate summary using AI with real transcript
       const summaryResponse = await fetch(
@@ -202,7 +206,8 @@ Deno.serve(async (req) => {
               },
               {
                 role: "user",
-                content: `Analyze this YouTube video transcript and provide a detailed JSON response with the following structure:
+                content: hasTranscript
+                  ? `Analyze this YouTube video transcript and provide a detailed JSON response with the following structure:
 {
   "summary": ["bullet point 1", "bullet point 2", ...],
   "transcript": [{"timestamp": "0:00", "seconds": 0, "text": "segment text"}, ...],
@@ -218,7 +223,18 @@ Important instructions:
 Video title: ${videoTitle}
 
 Transcript:
-${transcript.substring(0, 15000)}`,
+${transcript!.substring(0, 15000)}`
+                  : `This YouTube video titled "${videoTitle}" does not have captions available. Based on the title alone, generate an educational analysis with:
+{
+  "summary": ["bullet point 1", "bullet point 2", ...],
+  "transcript": [{"timestamp": "0:00", "seconds": 0, "text": "segment text"}, ...],
+  "duration": "unknown"
+}
+
+Important instructions:
+- Provide 3-5 summary bullet points about what the video likely covers based on its title
+- Create a single transcript segment noting that captions were unavailable
+- Set duration to "unknown"`,
               },
             ],
             tools: [
