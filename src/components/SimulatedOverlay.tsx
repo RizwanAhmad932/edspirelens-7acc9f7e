@@ -6,7 +6,7 @@ interface SimulatedOverlayProps {
 
 const SimulatedOverlay = ({ videoTitle }: SimulatedOverlayProps) => {
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto animate-fade-in">
       <div className="relative rounded-2xl overflow-hidden bg-primary shadow-elevated aspect-video">
         {/* Simulated video player */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gradient-primary opacity-90">

@@ -16,11 +16,12 @@ const HistorySection = ({ history, onSelect }: HistorySectionProps) => {
         Recent Analyses
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {history.map((item) => (
+        {history.map((item, index) => (
           <button
             key={item.id}
             onClick={() => onSelect(item)}
-            className="text-left p-5 rounded-xl bg-card border border-border shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all group"
+            className="text-left p-5 rounded-xl bg-card border border-border shadow-card hover:shadow-elevated hover:-translate-y-1 hover-scale transition-all group animate-fade-in"
+            style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
           >
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-display font-semibold text-sm text-foreground leading-tight line-clamp-2 group-hover:text-accent transition-colors">

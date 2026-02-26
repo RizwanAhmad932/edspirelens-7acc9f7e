@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Eye, Loader2 } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import edspireLogo from "@/assets/edspire-logo.png";
 import VideoInput from "@/components/VideoInput";
 import FloatingLens from "@/components/FloatingLens";
 import SimulatedOverlay from "@/components/SimulatedOverlay";
@@ -103,20 +104,18 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-surface">
       {/* Header */}
-      <header className="border-b border-border bg-card/80 glass sticky top-0 z-40">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-              <Eye className="h-5 w-5 text-primary-foreground" />
-            </div>
+      <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
+        <div className="container mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src={edspireLogo} alt="EdSpire.AI logo" className="h-10 w-10 object-contain" />
             <h1 className="font-display text-xl font-bold text-foreground">
-              EdSpire <span className="text-gradient">Lens</span>
+              EdSpire<span className="text-gradient">.AI</span>
             </h1>
           </div>
           {currentAnalysis && !lensOpen && (
             <button
               onClick={() => setLensOpen(true)}
-              className="text-xs px-3 py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity"
+              className="text-xs px-3 py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity animate-scale-in"
             >
               Open Lens
             </button>
@@ -128,8 +127,8 @@ const Index = () => {
       <main className="container mx-auto px-6 py-12 space-y-12">
         {/* Hero */}
         {!overlayMode && (
-          <div className="text-center space-y-6 max-w-2xl mx-auto pt-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium">
+          <div className="text-center space-y-6 max-w-2xl mx-auto pt-8 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium animate-scale-in">
               <Sparkles className="h-4 w-4" />
               AI-Powered Video Analysis
             </div>
@@ -139,7 +138,7 @@ const Index = () => {
               <span className="text-gradient">in seconds</span>
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Paste a video link and let EdSpire Lens extract key insights, generate quizzes, and help you learn faster.
+              Paste a video link and let EdSpire.AI extract key insights, generate quizzes, and help you learn faster.
             </p>
           </div>
         )}

@@ -58,8 +58,8 @@ const FloatingLens = ({ isOpen, onClose, summary, transcript, quiz, quizLoading,
   return (
     <div
       ref={dragRef}
-      className="fixed z-50 transition-all duration-200"
-      style={{ left: position.x, top: position.y, width: minimized ? 220 : 380 }}
+      className="fixed z-50 animate-scale-in"
+      style={{ left: position.x, top: position.y, width: minimized ? 220 : 380, transition: isDragging ? 'none' : 'width 0.2s ease' }}
     >
       <div className="rounded-2xl bg-card border border-border shadow-lens overflow-hidden">
         <div
@@ -69,7 +69,7 @@ const FloatingLens = ({ isOpen, onClose, summary, transcript, quiz, quizLoading,
           <GripVertical className="h-4 w-4 text-primary-foreground/60" />
           <div className="flex-1 min-w-0">
             <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">
-              EdSpire Lens
+              EdSpire.AI Lens
             </span>
             {!minimized && (
               <p className="text-xs text-primary-foreground/70 truncate mt-0.5">{videoTitle}</p>
