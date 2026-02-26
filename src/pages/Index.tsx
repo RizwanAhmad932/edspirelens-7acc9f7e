@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, LogOut } from "lucide-react";
+import { Sparkles, Loader2, LogOut, UserCircle, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,13 +33,30 @@ const Index = () => {
   const [history, setHistory] = useState<VideoAnalysis[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
         return;
+      }
+      if (event === "SIGNED_IN" && session?.user) {
+        setUser(session.user);
+        // Log login
+        try {
+          await supabase.from("login_logs").insert({
+            user_id: session.user.id,
+            email: session.user.email || "",
+            full_name: session.user.user_metadata?.full_name || "",
+            user_agent: navigator.userAgent,
+          });
+        } catch (e) { console.error("Login log error:", e); }
+        // Award XP for login
+        try {
+          await supabase.rpc("add_xp" as any, { _user_id: session.user.id, _amount: 5 });
+        } catch (e) { /* function may not exist yet */ }
       }
       setUser(session?.user || null);
     });
@@ -56,8 +73,20 @@ const Index = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (user) loadHistory();
+    if (user) {
+      loadHistory();
+      checkAdmin();
+    }
   }, [user]);
+
+  const checkAdmin = async () => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin");
+    setIsAdmin((data?.length || 0) > 0);
+  };
 
   const loadHistory = async () => {
     setHistoryLoading(true);
@@ -82,6 +111,11 @@ const Index = () => {
       setFlashcards([]);
       toast.success("Video analyzed successfully!");
       loadHistory();
+
+      // Award XP for analyzing
+      try {
+        await supabase.rpc("add_xp" as any, { _user_id: user.id, _amount: 25 });
+      } catch (e) { /* ignore */ }
 
       // Generate quiz + flashcards in background
       if (analysis.transcript.length > 0) {
@@ -117,6 +151,10 @@ const Index = () => {
       try {
         await updateQuizScore(currentAnalysis.id, score, total);
         loadHistory();
+        // Award XP for quiz completion
+        const xpEarned = Math.round((score / total) * 50);
+        await supabase.rpc("add_xp" as any, { _user_id: user.id, _amount: xpEarned });
+        toast.success(`+${xpEarned} XP earned!`);
       } catch (e) { console.error(e); }
     }
   };
@@ -131,14 +169,14 @@ const Index = () => {
     <div className="min-h-screen gradient-surface">
       {/* Header */}
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
-        <div className="container mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={edspireLogo} alt="EdSpire.AI logo" className="h-10 w-10 object-contain" />
-            <h1 className="font-display text-xl font-bold text-foreground">
+            <img src={edspireLogo} alt="EdSpire.AI logo" className="h-8 sm:h-10 w-8 sm:w-10 object-contain" />
+            <h1 className="font-display text-lg sm:text-xl font-bold text-foreground">
               EdSpire<span className="text-gradient">.AI</span>
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {currentAnalysis && !lensOpen && (
               <button
                 onClick={() => setLensOpen(true)}
@@ -147,6 +185,14 @@ const Index = () => {
                 Open Lens
               </button>
             )}
+            {isAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="h-9 w-9 text-muted-foreground hover:text-accent" title="Admin Panel">
+                <Shield className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Profile">
+              <UserCircle className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1.5 text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" />
@@ -157,21 +203,21 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-12 space-y-12">
+      <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12">
         {/* Hero */}
         {!overlayMode && (
-          <div className="text-center space-y-6 max-w-2xl mx-auto pt-8 animate-fade-in">
+          <div className="text-center space-y-4 sm:space-y-6 max-w-2xl mx-auto pt-4 sm:pt-8 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium animate-scale-in">
               <Sparkles className="h-4 w-4" />
               AI-Powered Video Analysis
             </div>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold text-foreground leading-tight">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight">
               Understand any video
               <br />
               <span className="text-gradient">in seconds</span>
             </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Paste a video link and let EdSpire.AI extract detailed notes, generate quizzes, flashcards, and help you learn faster.
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
+              Paste a video link and let EdSpire.AI extract detailed CBSE-level notes, quizzes, flashcards, and more.
             </p>
           </div>
         )}
