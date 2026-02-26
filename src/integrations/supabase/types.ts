@@ -14,27 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      login_logs: {
+        Row: {
+          email: string
+          full_name: string | null
+          id: string
+          ip_address: string | null
+          logged_in_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          email: string
+          full_name?: string | null
+          id?: string
+          ip_address?: string | null
+          logged_in_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          email?: string
+          full_name?: string | null
+          id?: string
+          ip_address?: string | null
+          logged_in_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           full_name: string | null
           id: string
+          level: number | null
+          selected_avatar: string | null
+          total_study_minutes: number | null
+          unlocked_avatars: Json | null
           updated_at: string
+          xp: number | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
           id: string
+          level?: number | null
+          selected_avatar?: string | null
+          total_study_minutes?: number | null
+          unlocked_avatars?: Json | null
           updated_at?: string
+          xp?: number | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          level?: number | null
+          selected_avatar?: string | null
+          total_study_minutes?: number | null
+          unlocked_avatars?: Json | null
           updated_at?: string
+          xp?: number | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -43,6 +106,7 @@ export type Database = {
           created_at: string
           duration: string | null
           id: string
+          notes: Json | null
           quiz: Json | null
           quiz_score: number | null
           quiz_total: number | null
@@ -57,6 +121,7 @@ export type Database = {
           created_at?: string
           duration?: string | null
           id?: string
+          notes?: Json | null
           quiz?: Json | null
           quiz_score?: number | null
           quiz_total?: number | null
@@ -71,6 +136,7 @@ export type Database = {
           created_at?: string
           duration?: string | null
           id?: string
+          notes?: Json | null
           quiz?: Json | null
           quiz_score?: number | null
           quiz_total?: number | null
@@ -88,10 +154,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_xp: {
+        Args: { _amount: number; _user_id: string }
+        Returns: undefined
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -218,6 +294,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

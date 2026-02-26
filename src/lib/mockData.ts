@@ -95,7 +95,7 @@ export async function fetchHistory(): Promise<VideoAnalysis[]> {
     video_title: row.video_title,
     duration: row.duration,
     summary: row.summary || [],
-    notes: [],
+    notes: row.notes || [],
     transcript: row.transcript || [],
     quiz_score: row.quiz_score,
     quiz_total: row.quiz_total,

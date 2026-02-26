@@ -153,25 +153,40 @@ Deno.serve(async (req) => {
       const summaryResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "You are an expert educational assistant. Analyze video transcripts and extract comprehensive, detailed study notes as a teacher would write them. Be thorough — capture every concept, example, question, and explanation." },
+          { role: "system", content: `You are an expert CBSE/NCERT educational assistant and subject matter expert. When analyzing video transcripts, you must:
+1. Generate COMPLETE chapter-level notes as if writing a textbook chapter — cover every concept, definition, formula, derivation, example, and exception mentioned
+2. For Science/Chemistry (d-block, f-block, organic chemistry etc.) include: electronic configurations, properties, trends, exceptions, important reactions, industrial applications
+3. For Math: include all formulas, theorems, proofs, worked examples
+4. For any subject: be exhaustive — a student should be able to study ONLY from your notes and understand the complete topic
+5. Use proper formatting: bullet points, numbered lists, sub-topics
+6. Include mnemonics, memory tricks, and exam tips where relevant
+7. Summary should be a high-level overview; Notes should be the complete detailed content` },
           {
             role: "user",
             content: hasTranscript
-              ? `Analyze this YouTube video transcript and provide a comprehensive educational breakdown.
+              ? `Analyze this YouTube video transcript and provide a COMPLETE chapter-level CBSE/educational breakdown. This should be comprehensive enough that a student can study the entire topic from these notes alone.
 
 Return JSON with:
-1. "summary" - 8-15 detailed bullet points covering ALL key topics and concepts
-2. "notes" - 10-25 detailed study notes, each note should be a complete paragraph explaining a concept, formula, example, or key teaching point. Write them like a textbook — thorough and clear.
+1. "summary" - 10-20 detailed bullet points covering ALL key topics, concepts, and their relationships
+2. "notes" - 20-40 DETAILED study notes. Each note should be a complete paragraph (3-6 sentences) explaining ONE concept thoroughly. Include:
+   - Definitions with examples
+   - Formulas with derivations where applicable
+   - Important reactions/processes
+   - Exceptions and special cases
+   - Comparison tables (as text)
+   - Exam-relevant tips and common mistakes
+   - Real-world applications
+   Write them exactly like a CBSE textbook chapter — thorough, structured, and exam-ready.
 3. "transcript" - Break into 15-30 meaningful segments with timestamps
 4. "duration" - Estimated duration
 
 Video title: ${videoTitle}
 
 Transcript:
-${transcript!.substring(0, 20000)}`
-              : `Video titled "${videoTitle}" has no captions. Based on the title, generate:
-1. "summary" - 3-5 points about likely topics
-2. "notes" - 2-3 general notes about what the video likely covers
+${transcript!.substring(0, 25000)}`
+              : `Video titled "${videoTitle}" has no captions. Based on the title, generate comprehensive CBSE-level notes:
+1. "summary" - 5-10 points about the topic based on CBSE syllabus
+2. "notes" - 5-10 detailed textbook-style notes covering the topic as per CBSE curriculum
 3. "transcript" - Single segment noting captions unavailable
 4. "duration" - "unknown"`,
           },
@@ -213,6 +228,7 @@ ${transcript!.substring(0, 20000)}`
           video_title: analysis.title,
           duration: analysis.duration,
           summary: analysis.summary,
+          notes: analysis.notes,
           transcript: analysis.transcript,
           user_id: userId,
         })

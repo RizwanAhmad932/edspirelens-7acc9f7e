@@ -1,1 +1,7 @@
 project_id = "toxbvtfimlbvscvvusks"
+
+[functions.analyze-video]
+verify_jwt = false
+
+[functions.admin-data]
+verify_jwt = false

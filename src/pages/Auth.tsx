@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User, Sparkles } from "lucide-react";
+import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft } from "lucide-react";
 import edspireLogo from "@/assets/edspire-logo.png";
 
+type AuthView = "login" | "signup" | "forgot";
+
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -35,7 +37,14 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (view === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Check your email for a password reset link!");
+        setView("login");
+      } else if (view === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back!");
@@ -74,13 +83,22 @@ const Auth = () => {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl shadow-elevated p-8">
+        <div className="bg-card border border-border rounded-2xl shadow-elevated p-8 animate-scale-in">
           <h2 className="font-display text-xl font-bold text-foreground text-center mb-6">
-            {isLogin ? "Sign in" : "Create account"}
+            {view === "login" ? "Sign in" : view === "signup" ? "Create account" : "Reset Password"}
           </h2>
 
+          {view === "forgot" && (
+            <button
+              onClick={() => setView("login")}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors mb-4"
+            >
+              <ArrowLeft className="h-3 w-3" /> Back to sign in
+            </button>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {view === "signup" && (
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
                 <div className="relative">
@@ -113,39 +131,67 @@ const Auth = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 h-11 rounded-xl"
-                  required
-                  minLength={6}
-                />
+            {view !== "forgot" && (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 h-11 rounded-xl"
+                    required
+                    minLength={6}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <Button
               type="submit"
               disabled={loading}
               className="w-full h-11 rounded-xl gradient-primary text-primary-foreground font-semibold"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLogin ? "Sign in" : "Create account"}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : view === "login" ? (
+                "Sign in"
+              ) : view === "signup" ? (
+                "Create account"
+              ) : (
+                "Send Reset Link"
+              )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-accent transition-colors"
-            >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
+          <div className="mt-6 text-center space-y-2">
+            {view === "login" && (
+              <>
+                <button
+                  onClick={() => setView("forgot")}
+                  className="text-xs text-accent hover:underline transition-colors block mx-auto"
+                >
+                  Forgot your password?
+                </button>
+                <button
+                  onClick={() => setView("signup")}
+                  className="text-sm text-muted-foreground hover:text-accent transition-colors"
+                >
+                  Don't have an account? Sign up
+                </button>
+              </>
+            )}
+            {view === "signup" && (
+              <button
+                onClick={() => setView("login")}
+                className="text-sm text-muted-foreground hover:text-accent transition-colors"
+              >
+                Already have an account? Sign in
+              </button>
+            )}
           </div>
         </div>
       </div>
