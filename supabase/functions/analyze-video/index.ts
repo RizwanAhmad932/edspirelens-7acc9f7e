@@ -19,7 +19,7 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-async function fetchYouTubeTranscript(videoId: string): Promise<string> {
+async function fetchYouTubeTranscriptTimed(videoId: string): Promise<TimedSegment[]> {
   try {
     const videoPageResponse = await fetch(
       `https://www.youtube.com/watch?v=${videoId}`,
@@ -33,21 +33,21 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
     if (!videoPageResponse.ok) throw new Error(`Failed to fetch video page: ${videoPageResponse.status}`);
     const html = await videoPageResponse.text();
     const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
-    if (!captionMatch) return await fetchTimedText(videoId);
+    if (!captionMatch) return await fetchTimedTextTimed(videoId);
     const captionTracks = JSON.parse(captionMatch[1]);
     const enTrack = captionTracks.find((t: any) => t.languageCode === "en" || t.vssId?.includes(".en")) || captionTracks[0];
-    if (!enTrack?.baseUrl) return await fetchTimedText(videoId);
+    if (!enTrack?.baseUrl) return await fetchTimedTextTimed(videoId);
     const captionUrl = enTrack.baseUrl.replace(/\\u0026/g, "&");
     const captionResponse = await fetch(captionUrl);
     if (!captionResponse.ok) throw new Error("Failed to fetch captions");
-    return parseTranscriptXml(await captionResponse.text());
+    return parseTranscriptXmlTimed(await captionResponse.text());
   } catch (error) {
     console.error("Transcript fetch error:", error);
-    return await fetchTimedText(videoId);
+    return await fetchTimedTextTimed(videoId);
   }
 }
 
-async function fetchTimedText(videoId: string): Promise<string> {
+async function fetchTimedTextTimed(videoId: string): Promise<TimedSegment[]> {
   const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=srv3`;
   const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
   if (!response.ok || response.headers.get("content-length") === "0") {
@@ -56,23 +56,40 @@ async function fetchTimedText(videoId: string): Promise<string> {
     if (!autoResponse.ok) throw new Error("No captions available for this video.");
     const xml = await autoResponse.text();
     if (!xml || xml.trim().length < 50) throw new Error("No captions available for this video.");
-    return parseTranscriptXml(xml);
+    return parseTranscriptXmlTimed(xml);
   }
   const xml = await response.text();
   if (!xml || xml.trim().length < 50) throw new Error("No captions available for this video.");
-  return parseTranscriptXml(xml);
+  return parseTranscriptXmlTimed(xml);
+}
+
+interface TimedSegment {
+  start: number;
+  text: string;
+}
+
+function formatTimestamp(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function parseTranscriptXml(xml: string): string {
-  const segments: string[] = [];
-  const textRegex = /<text[^>]*>([\s\S]*?)<\/text>/g;
+  const segments = parseTranscriptXmlTimed(xml);
+  return segments.map(s => s.text).join(" ");
+}
+
+function parseTranscriptXmlTimed(xml: string): TimedSegment[] {
+  const segments: TimedSegment[] = [];
+  const textRegex = /<text[^>]*start="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g;
   let match;
   while ((match = textRegex.exec(xml)) !== null) {
-    let text = match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]+>/g, "").trim();
-    if (text) segments.push(text);
+    const start = parseFloat(match[1]);
+    let text = match[2].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]+>/g, "").trim();
+    if (text) segments.push({ start, text });
   }
   if (segments.length === 0) throw new Error("Could not parse transcript from captions.");
-  return segments.join(" ");
+  return segments;
 }
 
 async function getVideoTitle(videoId: string): Promise<string> {
@@ -143,47 +160,64 @@ Deno.serve(async (req) => {
       }
 
       const videoTitle = await getVideoTitle(videoId);
-      let transcript: string | null = null;
-      try { transcript = await fetchYouTubeTranscript(videoId); } catch (e) {
+      let timedSegments: TimedSegment[] = [];
+      try { timedSegments = await fetchYouTubeTranscriptTimed(videoId); } catch (e) {
         console.warn(`No captions for "${videoTitle}":`, e instanceof Error ? e.message : e);
       }
 
-      const hasTranscript = transcript && transcript.length > 50;
+      const hasTranscript = timedSegments.length > 5;
+
+      // Build a timestamped transcript string so the AI sees the chronological order
+      let timestampedTranscript = "";
+      if (hasTranscript) {
+        // Group small segments into ~30s chunks for readability
+        const chunks: { timestamp: string; seconds: number; text: string }[] = [];
+        let currentChunk = { timestamp: formatTimestamp(timedSegments[0].start), seconds: Math.floor(timedSegments[0].start), texts: [timedSegments[0].text] };
+        for (let i = 1; i < timedSegments.length; i++) {
+          const seg = timedSegments[i];
+          if (seg.start - timedSegments[currentChunk.seconds > 0 ? i - 1 : 0].start > 30 || currentChunk.texts.join(" ").length > 300) {
+            chunks.push({ timestamp: currentChunk.timestamp, seconds: currentChunk.seconds, text: currentChunk.texts.join(" ") });
+            currentChunk = { timestamp: formatTimestamp(seg.start), seconds: Math.floor(seg.start), texts: [seg.text] };
+          } else {
+            currentChunk.texts.push(seg.text);
+          }
+        }
+        chunks.push({ timestamp: currentChunk.timestamp, seconds: currentChunk.seconds, text: currentChunk.texts.join(" ") });
+        timestampedTranscript = chunks.map(c => `[${c.timestamp}] ${c.text}`).join("\n");
+      }
 
       const summaryResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert CBSE/NCERT educational assistant and subject matter expert. When analyzing video transcripts, you must:
-1. Generate COMPLETE chapter-level notes as if writing a textbook chapter — cover every concept, definition, formula, derivation, example, and exception mentioned
-2. For Science/Chemistry (d-block, f-block, organic chemistry etc.) include: electronic configurations, properties, trends, exceptions, important reactions, industrial applications
-3. For Math: include all formulas, theorems, proofs, worked examples
-4. For any subject: be exhaustive — a student should be able to study ONLY from your notes and understand the complete topic
-5. Use proper formatting: bullet points, numbered lists, sub-topics
-6. Include mnemonics, memory tricks, and exam tips where relevant
-7. Summary should be a high-level overview; Notes should be the complete detailed content` },
+          { role: "system", content: `You are an expert CBSE/NCERT educational assistant. When analyzing video transcripts:
+1. FOLLOW THE CHRONOLOGICAL ORDER of the video — notes and summary MUST match the sequence topics appear in the lecture
+2. Use the EXACT timestamps provided in the transcript (format [M:SS]) — do NOT invent or change timestamps
+3. Generate COMPLETE chapter-level notes covering every concept, definition, formula, derivation, example, and exception
+4. For Science/Chemistry: electronic configurations, properties, trends, exceptions, reactions, industrial applications
+5. For Math: formulas, theorems, proofs, worked examples
+6. Summary points must follow the video's order of presentation
+7. Notes must follow the video's order — first topic discussed = first notes` },
           {
             role: "user",
             content: hasTranscript
-              ? `Analyze this YouTube video transcript and provide a COMPLETE chapter-level CBSE/educational breakdown. This should be comprehensive enough that a student can study the entire topic from these notes alone.
+              ? `Analyze this TIMESTAMPED video transcript. The timestamps are REAL — use them exactly as given.
 
-Return JSON with:
-1. "summary" - 10-20 detailed bullet points covering ALL key topics, concepts, and their relationships
-2. "notes" - 20-40 DETAILED study notes. Each note should be a complete paragraph (3-6 sentences) explaining ONE concept thoroughly. Include:
-   - Definitions with examples
-   - Formulas with derivations where applicable
-   - Important reactions/processes
-   - Exceptions and special cases
-   - Comparison tables (as text)
-   - Exam-relevant tips and common mistakes
-   - Real-world applications
-   Write them exactly like a CBSE textbook chapter — thorough, structured, and exam-ready.
-3. "transcript" - Break into 15-30 meaningful segments with timestamps
-4. "duration" - Estimated duration
+CRITICAL RULES:
+- Summary points MUST follow the chronological order of the video
+- Notes MUST follow the chronological order of the video  
+- Transcript segments: use the EXACT timestamps from the input below — do NOT make up timestamps
+- Each note should reference which part of the video it covers
+
+Return:
+1. "summary" - 10-20 points in VIDEO ORDER covering all key topics
+2. "notes" - 20-40 DETAILED study notes in VIDEO ORDER. Each note = complete paragraph (3-6 sentences) about ONE concept.
+3. "transcript" - Use the real timestamps from below. Group into 15-30 meaningful segments.
+4. "duration" - Estimated from the last timestamp
 
 Video title: ${videoTitle}
 
-Transcript:
-${transcript!.substring(0, 25000)}`
+Timestamped transcript:
+${timestampedTranscript.substring(0, 25000)}`
               : `Video titled "${videoTitle}" has no captions. Based on the title, generate comprehensive CBSE-level notes:
 1. "summary" - 5-10 points about the topic based on CBSE syllabus
 2. "notes" - 5-10 detailed textbook-style notes covering the topic as per CBSE curriculum
