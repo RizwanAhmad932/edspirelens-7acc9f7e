@@ -189,28 +189,34 @@ Deno.serve(async (req) => {
       const summaryResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert CBSE/NCERT educational assistant. When analyzing video transcripts:
-1. FOLLOW THE CHRONOLOGICAL ORDER of the video — notes and summary MUST match the sequence topics appear in the lecture
-2. Use the EXACT timestamps provided in the transcript (format [M:SS]) — do NOT invent or change timestamps
-3. Generate COMPLETE chapter-level notes covering every concept, definition, formula, derivation, example, and exception
-4. For Science/Chemistry: electronic configurations, properties, trends, exceptions, reactions, industrial applications
-5. For Math: formulas, theorems, proofs, worked examples
-6. Summary points must follow the video's order of presentation
-7. Notes must follow the video's order — first topic discussed = first notes` },
+          { role: "system", content: `You are a strict CBSE/NCERT educational assistant. Your ONLY job is to generate study material from what the teacher ACTUALLY discusses in the video.
+
+ABSOLUTE RULES:
+1. ONLY cover topics/chapters the teacher discusses in this video — NEVER add unrelated NCERT content
+2. Identify the exact CBSE Class (7-12), Subject, and Chapter from the teacher's lecture
+3. FOLLOW THE CHRONOLOGICAL ORDER of the video — notes and summary MUST match the sequence topics appear
+4. Use the EXACT timestamps provided in the transcript — do NOT invent timestamps
+5. Every note, summary point, and concept MUST trace back to something the teacher said in the video
+6. For Science/Math: include only the formulas, derivations, reactions, theorems the teacher covers
+7. Do NOT pad with extra NCERT content from sections the teacher did not discuss
+8. Prefix the first summary point with the detected class/subject/chapter, e.g. "Class 10 Science — Chapter 5: Periodic Classification of Elements"` },
           {
             role: "user",
             content: hasTranscript
               ? `Analyze this TIMESTAMPED video transcript. The timestamps are REAL — use them exactly as given.
 
 CRITICAL RULES:
+- ONLY generate content about topics the teacher ACTUALLY discusses in this video
+- Identify the CBSE Class, Subject, and Chapter from the lecture content
 - Summary points MUST follow the chronological order of the video
-- Notes MUST follow the chronological order of the video  
-- Transcript segments: use the EXACT timestamps from the input below — do NOT make up timestamps
+- Notes MUST follow the chronological order of the video
+- Do NOT include any NCERT content from chapters or sections NOT covered in this video
 - Each note should reference which part of the video it covers
+- Use the EXACT timestamps from the input below — do NOT make up timestamps
 
 Return:
-1. "summary" - 10-20 points in VIDEO ORDER covering all key topics
-2. "notes" - 20-40 DETAILED study notes in VIDEO ORDER. Each note = complete paragraph (3-6 sentences) about ONE concept.
+1. "summary" - 10-20 points in VIDEO ORDER covering ONLY topics discussed by the teacher
+2. "notes" - 20-40 DETAILED study notes in VIDEO ORDER. Each note = complete paragraph (3-6 sentences) about ONE concept the teacher explained. Include only formulas/reactions/examples the teacher covers.
 3. "transcript" - Use the real timestamps from below. Group into 15-30 meaningful segments.
 4. "duration" - Estimated from the last timestamp
 
@@ -218,9 +224,9 @@ Video title: ${videoTitle}
 
 Timestamped transcript:
 ${timestampedTranscript.substring(0, 25000)}`
-              : `Video titled "${videoTitle}" has no captions. Based on the title, generate comprehensive CBSE-level notes:
-1. "summary" - 5-10 points about the topic based on CBSE syllabus
-2. "notes" - 5-10 detailed textbook-style notes covering the topic as per CBSE curriculum
+              : `Video titled "${videoTitle}" has no captions. Based on the title, try to identify the CBSE class and chapter, then generate:
+1. "summary" - 5-10 points about ONLY the specific topic implied by the title
+2. "notes" - 5-10 detailed notes covering ONLY that specific topic as per NCERT
 3. "transcript" - Single segment noting captions unavailable
 4. "duration" - "unknown"`,
           },
@@ -281,16 +287,17 @@ ${timestampedTranscript.substring(0, 25000)}`
       const quizResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "You are a quiz generator. Extract ALL questions that the teacher asks, solves, or discusses in the video. Also create additional comprehension questions. There is NO limit on question count — extract every single question." },
+          { role: "system", content: "You are a CBSE quiz generator. Generate questions ONLY from topics the teacher discusses in this specific video. Do NOT add questions from unrelated NCERT chapters or sections not covered in the video." },
           {
             role: "user",
-            content: `Extract ALL questions from this video transcript. Include:
+            content: `Extract ALL questions STRICTLY from this video transcript. Include:
 1. Every question the teacher explicitly asks students
 2. Every problem/example the teacher solves
 3. Every concept-check or discussion question
-4. Additional comprehension questions covering remaining topics
+4. Additional comprehension questions — but ONLY about topics covered in THIS video
 
-Each question should have 4 options with exactly one correct answer. Do NOT limit to 5 questions — include ALL questions found.
+Do NOT create questions about NCERT topics not discussed by the teacher.
+Each question should have 4 options with exactly one correct answer.
 
 Transcript:
 ${transcriptText.substring(0, 15000)}`,
@@ -331,10 +338,10 @@ ${transcriptText.substring(0, 15000)}`,
       const fcResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "Generate study flashcards from educational video content. Cover all key concepts, definitions, formulas, and important facts." },
+          { role: "system", content: "Generate study flashcards ONLY from the specific topics the teacher covers in this video. Do NOT include flashcards about NCERT content from chapters or sections not discussed in the video." },
           {
             role: "user",
-            content: `Generate 10-20 study flashcards from this video transcript. Each card should have a "front" (question/term) and "back" (answer/definition). Cover all important concepts.
+            content: `Generate 10-20 study flashcards STRICTLY from this video transcript. Each card should have a "front" (question/term) and "back" (answer/definition). Only cover concepts, formulas, and facts the teacher actually discusses — no unrelated NCERT content.
 
 Transcript:
 ${transcriptText.substring(0, 10000)}`,
