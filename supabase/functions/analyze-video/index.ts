@@ -26,7 +26,7 @@ async function fetchYouTubeTranscriptTimed(videoId: string): Promise<TimedSegmen
       {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept-Language": "en-US,en;q=0.9",
+          "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
         },
       }
     );
@@ -35,9 +35,17 @@ async function fetchYouTubeTranscriptTimed(videoId: string): Promise<TimedSegmen
     const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
     if (!captionMatch) return await fetchTimedTextTimed(videoId);
     const captionTracks = JSON.parse(captionMatch[1]);
-    const enTrack = captionTracks.find((t: any) => t.languageCode === "en" || t.vssId?.includes(".en")) || captionTracks[0];
-    if (!enTrack?.baseUrl) return await fetchTimedTextTimed(videoId);
-    const captionUrl = enTrack.baseUrl.replace(/\\u0026/g, "&");
+    
+    // Priority: English manual > Hindi manual > English auto > any first track
+    const enManual = captionTracks.find((t: any) => t.languageCode === "en" && !t.kind);
+    const hiManual = captionTracks.find((t: any) => t.languageCode === "hi" && !t.kind);
+    const enAuto = captionTracks.find((t: any) => t.languageCode === "en" && t.kind === "asr");
+    const hiAuto = captionTracks.find((t: any) => t.languageCode === "hi" && t.kind === "asr");
+    const track = enManual || hiManual || enAuto || hiAuto || captionTracks[0];
+    
+    if (!track?.baseUrl) return await fetchTimedTextTimed(videoId);
+    const captionUrl = track.baseUrl.replace(/\\u0026/g, "&");
+    console.log(`Using caption track: lang=${track.languageCode}, kind=${track.kind || "manual"}`);
     const captionResponse = await fetch(captionUrl);
     if (!captionResponse.ok) throw new Error("Failed to fetch captions");
     return parseTranscriptXmlTimed(await captionResponse.text());
@@ -48,19 +56,27 @@ async function fetchYouTubeTranscriptTimed(videoId: string): Promise<TimedSegmen
 }
 
 async function fetchTimedTextTimed(videoId: string): Promise<TimedSegment[]> {
-  const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=srv3`;
-  const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-  if (!response.ok || response.headers.get("content-length") === "0") {
-    const autoUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=srv3`;
-    const autoResponse = await fetch(autoUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (!autoResponse.ok) throw new Error("No captions available for this video.");
-    const xml = await autoResponse.text();
-    if (!xml || xml.trim().length < 50) throw new Error("No captions available for this video.");
-    return parseTranscriptXmlTimed(xml);
+  // Try English, then Hindi, then auto-generated variants
+  const attempts = [
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=srv3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=hi&fmt=srv3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=srv3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=hi&kind=asr&fmt=srv3`,
+  ];
+  for (const url of attempts) {
+    try {
+      const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!response.ok) continue;
+      const xml = await response.text();
+      if (!xml || xml.trim().length < 50) continue;
+      const segments = parseTranscriptXmlTimed(xml);
+      if (segments.length > 0) {
+        console.log(`Fetched timed text from: ${url}`);
+        return segments;
+      }
+    } catch { continue; }
   }
-  const xml = await response.text();
-  if (!xml || xml.trim().length < 50) throw new Error("No captions available for this video.");
-  return parseTranscriptXmlTimed(xml);
+  throw new Error("No captions available for this video.");
 }
 
 interface TimedSegment {
