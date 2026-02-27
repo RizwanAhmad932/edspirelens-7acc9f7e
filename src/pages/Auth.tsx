@@ -72,9 +72,9 @@ const Auth = () => {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src={edspireLogo} alt="EdSpire.AI" className="h-12 w-12 object-contain" />
+            <img src={edspireLogo} alt="Edspire Lens" className="h-12 w-12 object-contain" />
             <h1 className="font-display text-3xl font-bold text-foreground">
-              EdSpire<span className="text-gradient">.AI</span>
+              Edspire <span className="text-gradient">Lens</span>
             </h1>
           </div>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-xs font-medium">

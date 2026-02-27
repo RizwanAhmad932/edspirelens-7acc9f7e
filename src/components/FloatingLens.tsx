@@ -73,7 +73,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
           <div className="flex items-center gap-2 px-4 py-3 gradient-primary">
             <div className="w-8 h-1 rounded-full bg-primary-foreground/30 mx-auto absolute left-1/2 -translate-x-1/2 top-1.5" />
             <div className="flex-1 min-w-0 mt-1">
-              <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">EdSpire.AI Lens</span>
+              <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">Edspire Lens</span>
               {!minimized && <p className="text-xs text-primary-foreground/70 truncate mt-0.5">{videoTitle}</p>}
             </div>
             <button onClick={() => setMinimized(!minimized)} className="p-1 rounded hover:bg-primary-foreground/10 text-primary-foreground/80">
@@ -149,7 +149,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
         >
           <GripVertical className="h-4 w-4 text-primary-foreground/60" />
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">EdSpire.AI Lens</span>
+            <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">Edspire Lens</span>
             {!minimized && <p className="text-xs text-primary-foreground/70 truncate mt-0.5">{videoTitle}</p>}
           </div>
           <button onClick={() => setMinimized(!minimized)} className="p-1 rounded hover:bg-primary-foreground/10 text-primary-foreground/80 transition-colors">

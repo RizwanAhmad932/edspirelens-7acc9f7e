@@ -44,7 +44,7 @@ const Profile = () => {
       .eq("id", user.id)
       .single();
 
-    if (error) { toast.error("Failed to load profile"); return; }
+    if (error) { toast.error("Failed to load profile"); setLoading(false); return; }
     setProfile(data);
     setFullName(data.full_name || "");
     setSelectedAvatar(data.selected_avatar || "default");
@@ -92,8 +92,10 @@ const Profile = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-9 w-9">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <img src={edspireLogo} alt="EdSpire.AI" className="h-8 w-8 object-contain" />
-            <h1 className="font-display text-lg font-bold text-foreground">Profile</h1>
+            <img src={edspireLogo} alt="Edspire Lens" className="h-8 w-8 object-contain" />
+            <h1 className="font-display text-lg font-bold text-foreground">
+              Edspire <span className="text-gradient">Lens</span> — Profile
+            </h1>
           </div>
           <ThemeToggle />
         </div>
