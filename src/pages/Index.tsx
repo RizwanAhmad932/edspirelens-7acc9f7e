@@ -171,9 +171,9 @@ const Index = () => {
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={edspireLogo} alt="EdSpire.AI logo" className="h-8 sm:h-10 w-8 sm:w-10 object-contain" />
+            <img src={edspireLogo} alt="Edspire Lens" className="h-8 sm:h-10 w-8 sm:w-10 object-contain" />
             <h1 className="font-display text-lg sm:text-xl font-bold text-foreground">
-              EdSpire<span className="text-gradient">.AI</span>
+              Edspire <span className="text-gradient">Lens</span>
             </h1>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
@@ -217,7 +217,7 @@ const Index = () => {
               <span className="text-gradient">in seconds</span>
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Paste a video link and let EdSpire.AI extract detailed CBSE-level notes, quizzes, flashcards, and more.
+              Paste a video link and let Edspire Lens extract detailed CBSE-level notes, quizzes, flashcards, and more.
             </p>
           </div>
         )}

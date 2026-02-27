@@ -57,7 +57,7 @@ const AdminDashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-9 w-9">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <img src={edspireLogo} alt="EdSpire.AI" className="h-8 w-8 object-contain" />
+            <img src={edspireLogo} alt="Edspire Lens" className="h-8 w-8 object-contain" />
             <h1 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
               <Shield className="h-4 w-4 text-accent" />
               Admin Panel
