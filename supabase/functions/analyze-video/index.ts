@@ -205,44 +205,47 @@ Deno.serve(async (req) => {
       const summaryResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are a strict CBSE/NCERT educational assistant. Your ONLY job is to generate study material from what the teacher ACTUALLY discusses in the video.
+          { role: "system", content: `You are an expert educational content analyst. Your job is to generate COMPLETE CHAPTER study material based on what the teacher discusses in the video.
 
-ABSOLUTE RULES:
-1. ONLY cover topics/chapters the teacher discusses in this video — NEVER add unrelated NCERT content
-2. Identify the exact CBSE Class (7-12), Subject, and Chapter from the teacher's lecture
-3. FOLLOW THE CHRONOLOGICAL ORDER of the video — notes and summary MUST match the sequence topics appear
-4. Use the EXACT timestamps provided in the transcript — do NOT invent timestamps
-5. Every note, summary point, and concept MUST trace back to something the teacher said in the video
-6. For Science/Math: include only the formulas, derivations, reactions, theorems the teacher covers
-7. Do NOT pad with extra NCERT content from sections the teacher did not discuss
-8. Prefix the first summary point with the detected class/subject/chapter, e.g. "Class 10 Science — Chapter 5: Periodic Classification of Elements"` },
+CRITICAL RULES:
+1. First, identify the EXACT Education Board (CBSE/ICSE/State Board/IB), Class (7-12), Subject, and Chapter from the lecture content and video title
+2. Once you identify the chapter, provide COMPLETE and THOROUGH notes covering the ENTIRE chapter as per that board's official syllabus textbook
+3. Do NOT just summarize what the teacher said — provide full textbook-quality notes for the identified chapter
+4. Include ALL formulas, definitions, key concepts, diagrams descriptions, important reactions, theorems, and derivations from that chapter
+5. Add exam tips, frequently asked questions, and important points to remember for board exams
+6. FOLLOW THE CHRONOLOGICAL ORDER of the textbook chapter, not the video
+7. Use the EXACT timestamps from the transcript for the summary/transcript sections
+8. Prefix the first summary point with the detected info, e.g. "CBSE Class 10 Science — Chapter 5: Periodic Classification of Elements"
+9. Do NOT mention the teacher's name, channel name, or anything about the video creator
+10. Notes should be written as if from an official textbook — formal, comprehensive, exam-ready` },
           {
             role: "user",
             content: hasTranscript
-              ? `Analyze this TIMESTAMPED video transcript. The timestamps are REAL — use them exactly as given.
+              ? `Analyze this TIMESTAMPED video transcript and identify the Board, Class, Subject, and Chapter.
 
-CRITICAL RULES:
-- ONLY generate content about topics the teacher ACTUALLY discusses in this video
-- Identify the CBSE Class, Subject, and Chapter from the lecture content
-- Summary points MUST follow the chronological order of the video
-- Notes MUST follow the chronological order of the video
-- Do NOT include any NCERT content from chapters or sections NOT covered in this video
-- Each note should reference which part of the video it covers
-- Use the EXACT timestamps from the input below — do NOT make up timestamps
+INSTRUCTIONS:
+1. IDENTIFY: Detect the Education Board (CBSE/ICSE/State Board/IB), Class, Subject, and exact Chapter from the content
+2. Once identified, provide COMPLETE CHAPTER NOTES — not just what the teacher said, but the FULL chapter content as per that board's official textbook/syllabus
+3. Do NOT mention teacher name, channel, or video creator — write as a textbook
+4. Use timestamps from the transcript for the summary section
 
 Return:
-1. "summary" - 10-20 points in VIDEO ORDER covering ONLY topics discussed by the teacher
-2. "notes" - 20-40 DETAILED study notes in VIDEO ORDER. Each note = complete paragraph (3-6 sentences) about ONE concept the teacher explained. Include only formulas/reactions/examples the teacher covers.
-3. "transcript" - Use the real timestamps from below. Group into 15-30 meaningful segments.
-4. "duration" - Estimated from the last timestamp
+1. "summary" - 15-25 points covering the FULL chapter outline with key topics, starting with "[Board] Class [X] [Subject] — Chapter [N]: [Name]"
+2. "notes" - 30-50 COMPREHENSIVE textbook-quality notes covering the ENTIRE chapter. Each note = complete paragraph (4-8 sentences). Include ALL formulas, definitions, reactions, theorems, derivations, examples, diagrams descriptions, exam tips, and important points from the chapter. Add "📝 Exam Tip:" and "⚠️ Important:" markers where relevant.
+3. "transcript" - Use the real timestamps. Group into 15-30 segments.
+4. "duration" - Estimated from last timestamp
 
 Video title: ${videoTitle}
 
 Timestamped transcript:
 ${timestampedTranscript.substring(0, 25000)}`
-              : `Video titled "${videoTitle}" has no captions. Based on the title, try to identify the CBSE class and chapter, then generate:
-1. "summary" - 5-10 points about ONLY the specific topic implied by the title
-2. "notes" - 5-10 detailed notes covering ONLY that specific topic as per NCERT
+              : `Video titled "${videoTitle}" has no captions available. Based on the title:
+1. Identify the Board, Class, Subject, and Chapter
+2. Provide COMPLETE chapter notes as per that board's textbook
+
+Return:
+1. "summary" - 10-15 full chapter summary points, starting with "[Board] Class [X] [Subject] — Chapter [N]: [Name]"
+2. "notes" - 20-30 comprehensive textbook notes for the full chapter with formulas, definitions, exam tips
 3. "transcript" - Single segment noting captions unavailable
 4. "duration" - "unknown"`,
           },
