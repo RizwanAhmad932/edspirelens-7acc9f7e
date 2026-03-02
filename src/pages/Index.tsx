@@ -7,8 +7,10 @@ import edspireLogo from "@/assets/edspire-logo.png";
 import VideoInput from "@/components/VideoInput";
 import FloatingLens from "@/components/FloatingLens";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
+import AudioPlayer from "@/components/AudioPlayer";
 import HistorySection from "@/components/HistorySection";
 import ThemeToggle from "@/components/ThemeToggle";
+import AdBanner, { AdPopup } from "@/components/AdBanner";
 import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
@@ -44,7 +46,6 @@ const Index = () => {
       }
       if (event === "SIGNED_IN" && session?.user) {
         setUser(session.user);
-        // Log login
         try {
           await supabase.from("login_logs").insert({
             user_id: session.user.id,
@@ -53,10 +54,9 @@ const Index = () => {
             user_agent: navigator.userAgent,
           });
         } catch (e) { console.error("Login log error:", e); }
-        // Award XP for login
         try {
           await supabase.rpc("add_xp" as any, { _user_id: session.user.id, _amount: 5 });
-        } catch (e) { /* function may not exist yet */ }
+        } catch (e) { /* ignore */ }
       }
       setUser(session?.user || null);
     });
@@ -112,12 +112,10 @@ const Index = () => {
       toast.success("Video analyzed successfully!");
       loadHistory();
 
-      // Award XP for analyzing
       try {
         await supabase.rpc("add_xp" as any, { _user_id: user.id, _amount: 25 });
       } catch (e) { /* ignore */ }
 
-      // Generate quiz + flashcards in background
       if (analysis.transcript.length > 0) {
         setQuizLoading(true);
         setFlashcardsLoading(true);
@@ -151,7 +149,6 @@ const Index = () => {
       try {
         await updateQuizScore(currentAnalysis.id, score, total);
         loadHistory();
-        // Award XP for quiz completion
         const xpEarned = Math.round((score / total) * 50);
         await supabase.rpc("add_xp" as any, { _user_id: user.id, _amount: xpEarned });
         toast.success(`+${xpEarned} XP earned!`);
@@ -167,6 +164,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen gradient-surface">
+      {/* Popup Ad */}
+      <AdPopup />
+
       {/* Header */}
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -217,18 +217,27 @@ const Index = () => {
               <span className="text-gradient">in seconds</span>
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Paste a video link and let Edspire Lens extract detailed CBSE-level notes, quizzes, flashcards, and more.
+              Paste a video link and let Edspire Lens extract detailed notes, quizzes, flashcards aligned to your board's syllabus.
             </p>
           </div>
         )}
 
+        {/* Banner Ad - Top */}
+        <AdBanner placement="home" />
+
         {/* Video Input */}
         <VideoInput onSubmit={handleAnalyze} isLoading={isLoading} />
 
-        {/* YouTube Embed */}
+        {/* YouTube Embed + Audio Player */}
         {overlayMode && currentAnalysis && (
-          <YouTubeEmbed videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
+          <>
+            <YouTubeEmbed videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
+            <AudioPlayer videoUrl={currentAnalysis.video_url} />
+          </>
         )}
+
+        {/* Banner Ad - Between content */}
+        <AdBanner placement="between_content" />
 
         {/* History */}
         {historyLoading ? (

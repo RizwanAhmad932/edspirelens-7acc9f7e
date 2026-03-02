@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_events: {
+        Row: {
+          ad_id: string
+          created_at: string
+          event_type: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          ad_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          ad_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_events_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads: {
+        Row: {
+          ad_type: string
+          clicks: number
+          created_at: string
+          id: string
+          is_active: boolean
+          link_url: string | null
+          media_type: string
+          media_url: string
+          placement: string
+          title: string
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          ad_type?: string
+          clicks?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          link_url?: string | null
+          media_type?: string
+          media_url: string
+          placement?: string
+          title: string
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          ad_type?: string
+          clicks?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          link_url?: string | null
+          media_type?: string
+          media_url?: string
+          placement?: string
+          title?: string
+          updated_at?: string
+          views?: number
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          created_at: string
+          description: string
+          expires_at: string | null
+          goal_target: number
+          goal_type: string
+          id: string
+          is_active: boolean
+          reward_type: string
+          reward_value: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          expires_at?: string | null
+          goal_target: number
+          goal_type: string
+          id?: string
+          is_active?: boolean
+          reward_type?: string
+          reward_value: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          expires_at?: string | null
+          goal_target?: number
+          goal_type?: string
+          id?: string
+          is_active?: boolean
+          reward_type?: string
+          reward_value?: string
+          title?: string
+        }
+        Relationships: []
+      }
       login_logs: {
         Row: {
           email: string
@@ -47,11 +163,15 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          board: string | null
           created_at: string
           full_name: string | null
           id: string
           level: number | null
+          phone: string | null
           selected_avatar: string | null
+          student_class: string | null
+          target_exam: string | null
           total_study_minutes: number | null
           unlocked_avatars: Json | null
           updated_at: string
@@ -59,11 +179,15 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          board?: string | null
           created_at?: string
           full_name?: string | null
           id: string
           level?: number | null
+          phone?: string | null
           selected_avatar?: string | null
+          student_class?: string | null
+          target_exam?: string | null
           total_study_minutes?: number | null
           unlocked_avatars?: Json | null
           updated_at?: string
@@ -71,17 +195,59 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          board?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           level?: number | null
+          phone?: string | null
           selected_avatar?: string | null
+          student_class?: string | null
+          target_exam?: string | null
           total_study_minutes?: number | null
           unlocked_avatars?: Json | null
           updated_at?: string
           xp?: number | null
         }
         Relationships: []
+      }
+      user_challenges: {
+        Row: {
+          challenge_id: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          progress: number
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          progress?: number
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          progress?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

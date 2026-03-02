@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify the caller is admin
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
@@ -33,7 +32,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role using service role
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
@@ -58,6 +56,12 @@ Deno.serve(async (req) => {
         .order("logged_in_at", { ascending: false })
         .limit(50);
 
+      // Fetch all user profiles with full info
+      const { data: users } = await adminClient
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       // Count total users
       const { count: totalUsers } = await adminClient
         .from("profiles")
@@ -78,6 +82,7 @@ Deno.serve(async (req) => {
 
       return new Response(JSON.stringify({
         loginLogs: loginLogs || [],
+        users: users || [],
         stats: {
           totalUsers: totalUsers || 0,
           todayLogins: todayLogins || 0,
