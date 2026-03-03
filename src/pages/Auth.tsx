@@ -92,7 +92,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-surface flex items-center justify-center px-4">
+    <div className="min-h-screen min-h-[100dvh] gradient-surface flex items-center justify-center px-3 sm:px-4 py-6 safe-top safe-bottom">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
@@ -107,7 +107,7 @@ const Auth = () => {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl shadow-elevated p-8 animate-scale-in">
+        <div className="bg-card border border-border rounded-2xl shadow-elevated p-5 sm:p-8 animate-scale-in">
           <h2 className="font-display text-xl font-bold text-foreground text-center mb-6">
             {view === "login" ? "Sign in" : view === "signup" ? "Create account" : "Reset Password"}
           </h2>
