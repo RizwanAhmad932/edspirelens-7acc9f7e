@@ -163,38 +163,37 @@ const Index = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen gradient-surface">
-      {/* Popup Ad */}
+    <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
       <AdPopup />
 
       {/* Header */}
-      <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
-        <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={edspireLogo} alt="Edspire Lens" className="h-8 sm:h-10 w-8 sm:w-10 object-contain" />
-            <h1 className="font-display text-lg sm:text-xl font-bold text-foreground">
+      <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 safe-top animate-fade-in">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <img src={edspireLogo} alt="Edspire Lens" className="h-7 w-7 sm:h-10 sm:w-10 object-contain shrink-0" />
+            <h1 className="font-display text-base sm:text-xl font-bold text-foreground truncate">
               Edspire <span className="text-gradient">Lens</span>
             </h1>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
             {currentAnalysis && !lensOpen && (
               <button
                 onClick={() => setLensOpen(true)}
-                className="text-xs px-3 py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity animate-scale-in"
+                className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full gradient-accent text-accent-foreground font-medium shadow-sm hover:opacity-90 transition-opacity animate-scale-in"
               >
                 Open Lens
               </button>
             )}
             {isAdmin && (
-              <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="h-9 w-9 text-muted-foreground hover:text-accent" title="Admin Panel">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-accent" title="Admin Panel">
                 <Shield className="h-4 w-4" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Profile">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")} className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground" title="Profile">
               <UserCircle className="h-4 w-4" />
             </Button>
             <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1.5 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1 sm:gap-1.5 text-muted-foreground hover:text-foreground h-8 sm:h-9 px-2 sm:px-3">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline text-xs">Sign out</span>
             </Button>
@@ -203,43 +202,38 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-6 sm:space-y-12">
         {/* Hero */}
         {!overlayMode && (
-          <div className="text-center space-y-4 sm:space-y-6 max-w-2xl mx-auto pt-4 sm:pt-8 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium animate-scale-in">
-              <Sparkles className="h-4 w-4" />
+          <div className="text-center space-y-3 sm:space-y-6 max-w-2xl mx-auto pt-2 sm:pt-8 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-accent/10 text-accent text-xs sm:text-sm font-medium animate-scale-in">
+              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               AI-Powered Video Analysis
             </div>
-            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight">
+            <h2 className="font-display text-2xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight">
               Understand any video
               <br />
               <span className="text-gradient">in seconds</span>
             </h2>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
+            <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto px-4 sm:px-0">
               Paste a video link and let Edspire Lens extract detailed notes, quizzes, flashcards aligned to your board's syllabus.
             </p>
           </div>
         )}
 
-        {/* Banner Ad - Top */}
         <AdBanner placement="home" />
 
-        {/* Video Input */}
         <VideoInput onSubmit={handleAnalyze} isLoading={isLoading} />
 
-        {/* YouTube Embed + Audio Player */}
         {overlayMode && currentAnalysis && (
-          <>
+          <div className="space-y-4">
             <YouTubeEmbed videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
             <AudioPlayer videoUrl={currentAnalysis.video_url} />
-          </>
+          </div>
         )}
 
-        {/* Banner Ad - Between content */}
         <AdBanner placement="between_content" />
 
-        {/* History */}
         {historyLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -249,7 +243,6 @@ const Index = () => {
         )}
       </main>
 
-      {/* Floating Lens */}
       {currentAnalysis && (
         <FloatingLens
           isOpen={lensOpen}

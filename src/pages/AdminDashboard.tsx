@@ -149,7 +149,7 @@ const AdminDashboard = () => {
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen gradient-surface">
+    <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 py-8 space-y-6 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6 animate-fade-in safe-bottom">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -187,11 +187,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 rounded-lg h-10">
-            <TabsTrigger value="users" className="text-xs gap-1"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
-            <TabsTrigger value="logins" className="text-xs gap-1"><Clock className="h-3.5 w-3.5" /> Logins</TabsTrigger>
-            <TabsTrigger value="ads" className="text-xs gap-1"><Megaphone className="h-3.5 w-3.5" /> Ads</TabsTrigger>
-            <TabsTrigger value="challenges" className="text-xs gap-1"><Trophy className="h-3.5 w-3.5" /> Challenges</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 rounded-lg h-9 sm:h-10">
+            <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Users</span><span className="xs:hidden">👤</span></TabsTrigger>
+            <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Logins</span></TabsTrigger>
+            <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Ads</span></TabsTrigger>
+            <TabsTrigger value="challenges" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Challenges</span></TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}

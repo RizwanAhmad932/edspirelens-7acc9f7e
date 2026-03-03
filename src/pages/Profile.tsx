@@ -102,7 +102,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen gradient-surface">
+    <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ const Profile = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 py-8 max-w-2xl space-y-8 animate-fade-in">
+      <main className="max-w-2xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-fade-in safe-bottom">
         {/* XP & Level Card */}
         <div className="bg-card border border-border rounded-2xl p-6 shadow-elevated animate-scale-in">
           <div className="flex items-center gap-4 mb-4">
