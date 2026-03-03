@@ -5,31 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Star, Zap, Trophy, Lock, GraduationCap, BookOpen, Target, Phone } from "lucide-react";
+import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target, Phone } from "lucide-react";
 import edspireLogo from "@/assets/edspire-logo.png";
 import ThemeToggle from "@/components/ThemeToggle";
-
-const AVATARS = [
-  { id: "default", emoji: "🧑‍🎓", name: "Scholar", xpRequired: 0 },
-  { id: "ninja", emoji: "🥷", name: "Study Ninja", xpRequired: 0 },
-  { id: "astronaut", emoji: "👨‍🚀", name: "Space Learner", xpRequired: 0 },
-  { id: "wizard", emoji: "🧙‍♂️", name: "Knowledge Wizard", xpRequired: 100 },
-  { id: "robot", emoji: "🤖", name: "AI Bot", xpRequired: 200 },
-  { id: "dragon", emoji: "🐉", name: "Dragon Scholar", xpRequired: 500 },
-  { id: "crown", emoji: "👑", name: "Study King", xpRequired: 1000 },
-  { id: "fire", emoji: "🔥", name: "On Fire", xpRequired: 1500 },
-  { id: "diamond", emoji: "💎", name: "Diamond Mind", xpRequired: 2500 },
-  { id: "galaxy", emoji: "🌌", name: "Galaxy Brain", xpRequired: 5000 },
-];
+import Avatar3D from "@/components/Avatar3D";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Other"];
 const CLASSES = ["7", "8", "9", "10", "11", "12"];
 const TARGET_EXAMS = ["Board Exams", "JEE", "NEET", "CUET", "Olympiads", "Other"];
 
+const DEFAULT_OUTFIT = { top: "tshirt_white", hat: "none_hat", accessory: "none_acc" };
+
 const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState("default");
   const [studentClass, setStudentClass] = useState("");
   const [board, setBoard] = useState("");
   const [targetExam, setTargetExam] = useState("");
@@ -38,6 +27,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [challenges, setChallenges] = useState<any[]>([]);
   const [userChallenges, setUserChallenges] = useState<any[]>([]);
+  const [outfit, setOutfit] = useState(DEFAULT_OUTFIT);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,13 +43,19 @@ const Profile = () => {
     
     setProfile(data);
     setFullName(data.full_name || "");
-    setSelectedAvatar(data.selected_avatar || "default");
     setStudentClass(data.student_class || "");
     setBoard(data.board || "");
     setTargetExam(data.target_exam || "");
     setPhone(data.phone || "");
 
-    // Load challenges
+    // Parse saved outfit from selected_avatar field (JSON string)
+    try {
+      const savedOutfit = data.selected_avatar ? JSON.parse(data.selected_avatar) : null;
+      if (savedOutfit && savedOutfit.top) setOutfit(savedOutfit);
+    } catch {
+      // legacy string value, use default
+    }
+
     const { data: ch } = await supabase.from("challenges").select("*").eq("is_active", true);
     setChallenges(ch || []);
 
@@ -74,7 +70,7 @@ const Profile = () => {
     try {
       const { error } = await supabase.from("profiles").update({
         full_name: fullName,
-        selected_avatar: selectedAvatar,
+        selected_avatar: JSON.stringify(outfit),
         student_class: studentClass,
         board: board,
         target_exam: targetExam || null,
@@ -122,9 +118,6 @@ const Profile = () => {
         {/* XP & Level Card */}
         <div className="bg-card border border-border rounded-2xl p-6 shadow-elevated animate-scale-in">
           <div className="flex items-center gap-4 mb-4">
-            <div className="text-5xl">
-              {AVATARS.find(a => a.id === selectedAvatar)?.emoji || "🧑‍🎓"}
-            </div>
             <div className="flex-1">
               <h2 className="font-display text-xl font-bold text-foreground">{fullName || "Student"}</h2>
               <div className="flex items-center gap-2 mt-1">
@@ -156,6 +149,9 @@ const Profile = () => {
             </div>
           </div>
         </div>
+
+        {/* 3D Avatar with clothing picker */}
+        <Avatar3D xp={xp} selectedOutfit={outfit} onOutfitChange={setOutfit} />
 
         {/* Edit Info */}
         <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
@@ -195,35 +191,6 @@ const Profile = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Avatar Picker */}
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
-          <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-accent" /> Choose Avatar
-          </h3>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-            {AVATARS.map((avatar) => {
-              const unlocked = xp >= avatar.xpRequired;
-              const isSelected = selectedAvatar === avatar.id;
-              return (
-                <button key={avatar.id} onClick={() => unlocked && setSelectedAvatar(avatar.id)} disabled={!unlocked}
-                  className={`relative p-3 rounded-xl border-2 transition-all text-center ${isSelected ? "border-accent bg-accent/10 shadow-sm" : unlocked ? "border-border bg-secondary/30 hover:bg-secondary/60 hover:border-accent/50" : "border-border/50 bg-secondary/10 opacity-50 cursor-not-allowed"}`}>
-                  <div className="text-3xl mb-1">{avatar.emoji}</div>
-                  <p className="text-[10px] font-medium text-foreground truncate">{avatar.name}</p>
-                  {!unlocked && (
-                    <div className="absolute inset-0 rounded-xl bg-background/60 flex items-center justify-center">
-                      <div className="text-center">
-                        <Lock className="h-4 w-4 text-muted-foreground mx-auto" />
-                        <span className="text-[9px] text-muted-foreground">{avatar.xpRequired} XP</span>
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">Earn XP by analyzing videos, completing quizzes, and studying!</p>
         </div>
 
         {/* Challenges */}
