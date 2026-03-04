@@ -16,6 +16,14 @@ interface AdBannerProps {
   placement: "home" | "between_content";
 }
 
+const ensureUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
 const AdBanner = ({ placement }: AdBannerProps) => {
   const [ad, setAd] = useState<Ad | null>(null);
 
@@ -46,8 +54,9 @@ const AdBanner = ({ placement }: AdBannerProps) => {
   const handleClick = () => {
     if (!ad) return;
     trackEvent(ad.id, "click");
-    if (ad.link_url) {
-      window.open(ad.link_url, "_blank", "noopener,noreferrer");
+    const url = ensureUrl(ad.link_url);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -61,6 +70,8 @@ const AdBanner = ({ placement }: AdBannerProps) => {
       >
         {ad.media_type === "video" ? (
           <video src={ad.media_url} autoPlay muted loop playsInline className="w-full h-auto max-h-24 sm:max-h-32 object-cover" />
+        ) : ad.media_type === "google_ad" ? (
+          <img src={ad.media_url} alt={ad.title} className="w-full h-auto max-h-24 sm:max-h-32 object-cover" loading="lazy" />
         ) : (
           <img src={ad.media_url} alt={ad.title} className="w-full h-auto max-h-24 sm:max-h-32 object-cover" loading="lazy" />
         )}
@@ -104,8 +115,9 @@ export const AdPopup = () => {
   const handleClick = () => {
     if (!ad) return;
     trackEvent(ad.id, "click");
-    if (ad.link_url) {
-      window.open(ad.link_url, "_blank", "noopener,noreferrer");
+    const url = ensureUrl(ad.link_url);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   };
 

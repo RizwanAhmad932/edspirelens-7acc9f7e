@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, LogOut, UserCircle, Shield } from "lucide-react";
+import { Sparkles, Loader2, LogOut, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import AudioPlayer from "@/components/AudioPlayer";
 import HistorySection from "@/components/HistorySection";
 import ThemeToggle from "@/components/ThemeToggle";
 import AdBanner, { AdPopup } from "@/components/AdBanner";
+import { MiniAvatar3D } from "@/components/Avatar3D";
 import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
@@ -36,6 +37,7 @@ const Index = () => {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userOutfit, setUserOutfit] = useState({ top: "tshirt_white", hat: "none_hat", accessory: "none_acc" });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,8 +78,19 @@ const Index = () => {
     if (user) {
       loadHistory();
       checkAdmin();
+      loadOutfit();
     }
   }, [user]);
+
+  const loadOutfit = async () => {
+    const { data } = await supabase.from("profiles").select("selected_avatar").eq("id", user.id).single();
+    if (data?.selected_avatar) {
+      try {
+        const parsed = JSON.parse(data.selected_avatar);
+        if (parsed?.top) setUserOutfit(parsed);
+      } catch {}
+    }
+  };
 
   const checkAdmin = async () => {
     const { data } = await supabase
@@ -189,9 +202,9 @@ const Index = () => {
                 <Shield className="h-4 w-4" />
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")} className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground" title="Profile">
-              <UserCircle className="h-4 w-4" />
-            </Button>
+            <button onClick={() => navigate("/profile")} className="hover:opacity-80 transition-opacity" title="Profile">
+              <MiniAvatar3D outfit={userOutfit} />
+            </button>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1 sm:gap-1.5 text-muted-foreground hover:text-foreground h-8 sm:h-9 px-2 sm:px-3">
               <LogOut className="h-4 w-4" />
