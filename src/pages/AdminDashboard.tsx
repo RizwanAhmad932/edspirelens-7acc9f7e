@@ -28,6 +28,9 @@ const AdminDashboard = () => {
   const [adLinkUrl, setAdLinkUrl] = useState("");
   const [adFile, setAdFile] = useState<File | null>(null);
   const [adUploading, setAdUploading] = useState(false);
+  const [adSourceType, setAdSourceType] = useState<"upload" | "google_ads">("upload");
+  const [googleAdUrl, setGoogleAdUrl] = useState("");
+  const [adEventCounts, setAdEventCounts] = useState<Record<string, { views: number; clicks: number }>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Challenge form state
@@ -66,6 +69,15 @@ const AdminDashboard = () => {
   const loadAds = async () => {
     const { data } = await supabase.from("ads").select("*").order("created_at", { ascending: false });
     setAds(data || []);
+    // Load real event counts
+    const { data: events } = await supabase.from("ad_events").select("ad_id, event_type");
+    const counts: Record<string, { views: number; clicks: number }> = {};
+    (events || []).forEach((e: any) => {
+      if (!counts[e.ad_id]) counts[e.ad_id] = { views: 0, clicks: 0 };
+      if (e.event_type === "view") counts[e.ad_id].views++;
+      if (e.event_type === "click") counts[e.ad_id].clicks++;
+    });
+    setAdEventCounts(counts);
   };
 
   const loadChallenges = async () => {
@@ -74,7 +86,34 @@ const AdminDashboard = () => {
   };
 
   const handleUploadAd = async () => {
-    if (!adTitle || !adFile) { toast.error("Title and file required"); return; }
+    if (!adTitle) { toast.error("Title required"); return; }
+    
+    if (adSourceType === "google_ads") {
+      // Google Ads link - use as an iframe/embed URL
+      if (!googleAdUrl) { toast.error("Google Ads URL required"); return; }
+      setAdUploading(true);
+      try {
+        const { error } = await supabase.from("ads").insert({
+          title: adTitle,
+          ad_type: adType,
+          media_url: googleAdUrl,
+          media_type: "google_ad",
+          link_url: adLinkUrl || null,
+          placement: adPlacement,
+        });
+        if (error) throw error;
+        toast.success("Google Ad created!");
+        setAdTitle(""); setAdLinkUrl(""); setGoogleAdUrl("");
+        await loadAds();
+      } catch (e: any) {
+        toast.error(e.message || "Failed to create ad");
+      } finally {
+        setAdUploading(false);
+      }
+      return;
+    }
+
+    if (!adFile) { toast.error("File required"); return; }
     setAdUploading(true);
     try {
       const ext = adFile.name.split(".").pop();
@@ -278,14 +317,25 @@ const AdminDashboard = () => {
                 <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2 mb-4">
                   <Plus className="h-5 w-5 text-accent" /> Create New Ad
                 </h3>
+
+                {/* Source Type Toggle */}
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => setAdSourceType("upload")} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${adSourceType === "upload" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"}`}>
+                    📁 Upload Media
+                  </button>
+                  <button onClick={() => setAdSourceType("google_ads")} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${adSourceType === "google_ads" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"}`}>
+                    🔗 Google Ads Link
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Ad Title</Label>
                     <Input value={adTitle} onChange={e => setAdTitle(e.target.value)} placeholder="Ad title" className="rounded-xl h-10" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Link URL</Label>
-                    <Input value={adLinkUrl} onChange={e => setAdLinkUrl(e.target.value)} placeholder="https://..." className="rounded-xl h-10" />
+                    <Label className="text-sm">Link URL (where user goes on click)</Label>
+                    <Input value={adLinkUrl} onChange={e => setAdLinkUrl(e.target.value)} placeholder="https://example.com" className="rounded-xl h-10" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm">Type</Label>
@@ -302,10 +352,19 @@ const AdminDashboard = () => {
                       <option value="popup">Popup</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-sm">Upload Image or Video</Label>
-                    <input ref={fileRef} type="file" accept="image/*,video/*" onChange={e => setAdFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/10 file:text-accent hover:file:bg-accent/20" />
-                  </div>
+
+                  {adSourceType === "upload" ? (
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-sm">Upload Image or Video</Label>
+                      <input ref={fileRef} type="file" accept="image/*,video/*" onChange={e => setAdFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/10 file:text-accent hover:file:bg-accent/20" />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-sm">Google Ads Image/Script URL</Label>
+                      <Input value={googleAdUrl} onChange={e => setGoogleAdUrl(e.target.value)} placeholder="https://pagead2.googlesyndication.com/..." className="rounded-xl h-10" />
+                      <p className="text-[10px] text-muted-foreground">Paste the image URL or ad tag URL from Google Ads</p>
+                    </div>
+                  )}
                 </div>
                 <Button onClick={handleUploadAd} disabled={adUploading} className="mt-4 gradient-primary text-primary-foreground rounded-xl">
                   {adUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
@@ -341,14 +400,16 @@ const AdminDashboard = () => {
                           <TableCell>
                             {ad.media_type === "video" ? (
                               <Video className="h-8 w-8 text-muted-foreground" />
+                            ) : ad.media_type === "google_ad" ? (
+                              <span className="text-lg">🔗</span>
                             ) : (
                               <img src={ad.media_url} alt="" className="h-8 w-12 object-cover rounded" />
                             )}
                           </TableCell>
                           <TableCell className="font-medium text-foreground text-sm">{ad.title}</TableCell>
                           <TableCell className="text-xs capitalize">{ad.ad_type} / {ad.placement}</TableCell>
-                          <TableCell className="text-sm font-semibold">{ad.views}</TableCell>
-                          <TableCell className="text-sm font-semibold">{ad.clicks}</TableCell>
+                          <TableCell className="text-sm font-semibold">{adEventCounts[ad.id]?.views || 0}</TableCell>
+                          <TableCell className="text-sm font-semibold">{adEventCounts[ad.id]?.clicks || 0}</TableCell>
                           <TableCell>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${ad.is_active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>
                               {ad.is_active ? "Active" : "Inactive"}
