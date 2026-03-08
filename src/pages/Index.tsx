@@ -57,8 +57,8 @@ const Index = () => {
           });
         } catch (e) { console.error("Login log error:", e); }
         try {
-          await supabase.rpc("add_xp" as any, { _user_id: session.user.id, _amount: 5 });
-        } catch (e) { /* ignore */ }
+        await supabase.rpc("add_xp", { _user_id: session.user.id, _amount: 5 });
+      } catch (e) { /* ignore */ }
       }
       setUser(session?.user || null);
     });
@@ -126,7 +126,7 @@ const Index = () => {
       loadHistory();
 
       try {
-        await supabase.rpc("add_xp" as any, { _user_id: user.id, _amount: 25 });
+        await supabase.rpc("add_xp", { _user_id: user.id, _amount: 25 });
       } catch (e) { /* ignore */ }
 
       if (analysis.transcript.length > 0) {
@@ -163,7 +163,7 @@ const Index = () => {
         await updateQuizScore(currentAnalysis.id, score, total);
         loadHistory();
         const xpEarned = Math.round((score / total) * 50);
-        await supabase.rpc("add_xp" as any, { _user_id: user.id, _amount: xpEarned });
+        await supabase.rpc("add_xp", { _user_id: user.id, _amount: xpEarned });
         toast.success(`+${xpEarned} XP earned!`);
       } catch (e) { console.error(e); }
     }
