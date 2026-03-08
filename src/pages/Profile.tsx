@@ -16,6 +16,13 @@ const TARGET_EXAMS = ["Board Exams", "JEE", "NEET", "CUET", "Olympiads", "Other"
 
 const DEFAULT_OUTFIT = { top: "tshirt_white", hat: "none_hat", accessory: "none_acc" };
 
+interface SavedAvatarData {
+  top: string;
+  hat: string;
+  accessory: string;
+  owned?: string[];
+}
+
 const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState("");
@@ -28,6 +35,8 @@ const Profile = () => {
   const [challenges, setChallenges] = useState<any[]>([]);
   const [userChallenges, setUserChallenges] = useState<any[]>([]);
   const [outfit, setOutfit] = useState(DEFAULT_OUTFIT);
+  const [ownedItems, setOwnedItems] = useState<string[]>([]);
+  const [currentXp, setCurrentXp] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,13 +56,17 @@ const Profile = () => {
     setBoard(data.board || "");
     setTargetExam(data.target_exam || "");
     setPhone(data.phone || "");
+    setCurrentXp(data.xp || 0);
 
-    // Parse saved outfit from selected_avatar field (JSON string)
+    // Parse saved outfit + owned items
     try {
-      const savedOutfit = data.selected_avatar ? JSON.parse(data.selected_avatar) : null;
-      if (savedOutfit && savedOutfit.top) setOutfit(savedOutfit);
+      const saved: SavedAvatarData = data.selected_avatar ? JSON.parse(data.selected_avatar) : null;
+      if (saved && saved.top) {
+        setOutfit({ top: saved.top, hat: saved.hat, accessory: saved.accessory });
+        setOwnedItems(saved.owned || []);
+      }
     } catch {
-      // legacy string value, use default
+      // legacy string value
     }
 
     const { data: ch } = await supabase.from("challenges").select("*").eq("is_active", true);
@@ -65,12 +78,38 @@ const Profile = () => {
     setLoading(false);
   };
 
+  const handlePurchase = async (itemId: string, cost: number) => {
+    if (currentXp < cost) {
+      toast.error("Not enough XP!");
+      return;
+    }
+
+    // Deduct XP by adding negative amount
+    try {
+      await supabase.rpc("add_xp", { _user_id: profile.id, _amount: -cost });
+      const newXp = currentXp - cost;
+      setCurrentXp(newXp);
+      setProfile((p: any) => ({ ...p, xp: newXp }));
+      const newOwned = [...ownedItems, itemId];
+      setOwnedItems(newOwned);
+      
+      // Auto-save owned items
+      const avatarData: SavedAvatarData = { ...outfit, owned: newOwned };
+      await supabase.from("profiles").update({
+        selected_avatar: JSON.stringify(avatarData),
+      }).eq("id", profile.id);
+    } catch (e: any) {
+      toast.error("Purchase failed: " + (e.message || "Unknown error"));
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const avatarData: SavedAvatarData = { ...outfit, owned: ownedItems };
       const { error } = await supabase.from("profiles").update({
         full_name: fullName,
-        selected_avatar: JSON.stringify(outfit),
+        selected_avatar: JSON.stringify(avatarData),
         student_class: studentClass,
         board: board,
         target_exam: targetExam || null,
@@ -85,7 +124,7 @@ const Profile = () => {
     }
   };
 
-  const xp = profile?.xp || 0;
+  const xp = currentXp;
   const level = profile?.level || 1;
   const xpProgress = Math.min((xp % 200) / 200 * 100, 100);
 
@@ -138,7 +177,6 @@ const Profile = () => {
               <span className="text-xs text-muted-foreground">Study time</span>
             </div>
           </div>
-
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Progress to Level {level + 1}</span>
@@ -151,7 +189,13 @@ const Profile = () => {
         </div>
 
         {/* 3D Avatar with clothing picker */}
-        <Avatar3D xp={xp} selectedOutfit={outfit} onOutfitChange={setOutfit} />
+        <Avatar3D
+          xp={xp}
+          selectedOutfit={outfit}
+          onOutfitChange={setOutfit}
+          ownedItems={ownedItems}
+          onPurchase={handlePurchase}
+        />
 
         {/* Edit Info */}
         <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
@@ -224,7 +268,7 @@ const Profile = () => {
                         <div className="h-full rounded-full gradient-accent transition-all duration-500" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
-                    {uc?.completed && <span className="text-xs text-success font-semibold mt-1 block">✅ Completed!</span>}
+                    {uc?.completed && <span className="text-xs text-green-500 font-semibold mt-1 block">✅ Completed!</span>}
                   </div>
                 );
               })}
