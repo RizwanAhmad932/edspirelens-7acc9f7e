@@ -178,6 +178,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
+      <FestivalOverlay />
       <AdPopup />
 
       {/* Header */}
