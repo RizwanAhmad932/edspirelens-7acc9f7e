@@ -5,11 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X } from "lucide-react";
+import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import edspireLogo from "@/assets/edspire-logo.png";
 import ThemeToggle from "@/components/ThemeToggle";
+
+const FESTIVAL_THEMES = [
+  { name: "none", label: "No Theme", icon: "❌", desc: "Default look" },
+  { name: "republic_day", label: "Republic Day", icon: "🇮🇳", desc: "Tricolor flags & Ashoka Chakra" },
+  { name: "eid", label: "Eid", icon: "🌙", desc: "Crescent moon, stars & Eid Mubarak" },
+  { name: "diwali", label: "Diwali", icon: "🪔", desc: "Diyas, fireworks & lights" },
+  { name: "dussehra", label: "Dussehra", icon: "🏹", desc: "Fire effects & victory theme" },
+  { name: "holi", label: "Holi", icon: "🎨", desc: "Color splashes everywhere" },
+  { name: "christmas", label: "Christmas", icon: "🎄", desc: "Snowfall & Santa flying" },
+];
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -19,6 +29,8 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [challenges, setChallenges] = useState<any[]>([]);
+  const [activeTheme, setActiveTheme] = useState("none");
+  const [themeSaving, setThemeSaving] = useState(false);
   const navigate = useNavigate();
 
   // Ad form state
@@ -61,15 +73,32 @@ const AdminDashboard = () => {
     setLoginLogs(data.loginLogs || []);
     setStats(data.stats || { totalUsers: 0, todayLogins: 0, totalLogins: 0 });
     setUsers(data.users || []);
-    await loadAds();
-    await loadChallenges();
+    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme()]);
     setLoading(false);
+  };
+
+  const loadActiveTheme = async () => {
+    const { data } = await supabase.from("app_themes").select("theme_name").eq("is_active", true).single();
+    if (data) setActiveTheme(data.theme_name);
+  };
+
+  const handleSetTheme = async (themeName: string) => {
+    setThemeSaving(true);
+    try {
+      const { error } = await supabase.rpc("activate_theme", { _theme_name: themeName });
+      if (error) throw error;
+      setActiveTheme(themeName);
+      toast.success(`Theme set to ${FESTIVAL_THEMES.find(t => t.name === themeName)?.label || themeName}!`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to set theme");
+    } finally {
+      setThemeSaving(false);
+    }
   };
 
   const loadAds = async () => {
     const { data } = await supabase.from("ads").select("*").order("created_at", { ascending: false });
     setAds(data || []);
-    // Load real event counts
     const { data: events } = await supabase.from("ad_events").select("ad_id, event_type");
     const counts: Record<string, { views: number; clicks: number }> = {};
     (events || []).forEach((e: any) => {
@@ -89,27 +118,19 @@ const AdminDashboard = () => {
     if (!adTitle) { toast.error("Title required"); return; }
     
     if (adSourceType === "google_ads") {
-      // Google Ads link - use as an iframe/embed URL
       if (!googleAdUrl) { toast.error("Google Ads URL required"); return; }
       setAdUploading(true);
       try {
         const { error } = await supabase.from("ads").insert({
-          title: adTitle,
-          ad_type: adType,
-          media_url: googleAdUrl,
-          media_type: "google_ad",
-          link_url: adLinkUrl || null,
-          placement: adPlacement,
+          title: adTitle, ad_type: adType, media_url: googleAdUrl,
+          media_type: "google_ad", link_url: adLinkUrl || null, placement: adPlacement,
         });
         if (error) throw error;
         toast.success("Google Ad created!");
         setAdTitle(""); setAdLinkUrl(""); setGoogleAdUrl("");
         await loadAds();
-      } catch (e: any) {
-        toast.error(e.message || "Failed to create ad");
-      } finally {
-        setAdUploading(false);
-      }
+      } catch (e: any) { toast.error(e.message || "Failed"); }
+      finally { setAdUploading(false); }
       return;
     }
 
@@ -120,29 +141,19 @@ const AdminDashboard = () => {
       const path = `${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("ad-media").upload(path, adFile);
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage.from("ad-media").getPublicUrl(path);
       const mediaType = adFile.type.startsWith("video") ? "video" : "image";
-
       const { error } = await supabase.from("ads").insert({
-        title: adTitle,
-        ad_type: adType,
-        media_url: urlData.publicUrl,
-        media_type: mediaType,
-        link_url: adLinkUrl || null,
-        placement: adPlacement,
+        title: adTitle, ad_type: adType, media_url: urlData.publicUrl,
+        media_type: mediaType, link_url: adLinkUrl || null, placement: adPlacement,
       });
       if (error) throw error;
-
       toast.success("Ad created!");
       setAdTitle(""); setAdLinkUrl(""); setAdFile(null);
       if (fileRef.current) fileRef.current.value = "";
       await loadAds();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to upload ad");
-    } finally {
-      setAdUploading(false);
-    }
+    } catch (e: any) { toast.error(e.message || "Failed"); }
+    finally { setAdUploading(false); }
   };
 
   const toggleAd = async (id: string, active: boolean) => {
@@ -159,12 +170,8 @@ const AdminDashboard = () => {
   const handleCreateChallenge = async () => {
     if (!chTitle || !chDesc || !chRewardValue || !chGoalTarget) { toast.error("Fill all fields"); return; }
     const { error } = await supabase.from("challenges").insert({
-      title: chTitle,
-      description: chDesc,
-      reward_type: chRewardType,
-      reward_value: chRewardValue,
-      goal_type: chGoalType,
-      goal_target: parseInt(chGoalTarget),
+      title: chTitle, description: chDesc, reward_type: chRewardType,
+      reward_value: chRewardValue, goal_type: chGoalType, goal_target: parseInt(chGoalTarget),
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Challenge created!");
@@ -226,11 +233,12 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 bg-secondary/50 rounded-lg h-9 sm:h-10">
-            <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Users</span><span className="xs:hidden">👤</span></TabsTrigger>
-            <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Logins</span></TabsTrigger>
-            <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Ads</span></TabsTrigger>
-            <TabsTrigger value="challenges" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5" /><span className="hidden xs:inline">Challenges</span></TabsTrigger>
+          <TabsList className="w-full grid grid-cols-5 bg-secondary/50 rounded-lg h-9 sm:h-10">
+            <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3" /><span className="hidden sm:inline">Users</span></TabsTrigger>
+            <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3" /><span className="hidden sm:inline">Logins</span></TabsTrigger>
+            <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3" /><span className="hidden sm:inline">Ads</span></TabsTrigger>
+            <TabsTrigger value="challenges" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Trophy className="h-3 w-3" /><span className="hidden sm:inline">Challenges</span></TabsTrigger>
+            <TabsTrigger value="themes" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Palette className="h-3 w-3" /><span className="hidden sm:inline">Themes</span></TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -312,13 +320,10 @@ const AdminDashboard = () => {
           {/* Ads Tab */}
           <TabsContent value="ads">
             <div className="space-y-6">
-              {/* Create Ad Form */}
               <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
                 <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2 mb-4">
                   <Plus className="h-5 w-5 text-accent" /> Create New Ad
                 </h3>
-
-                {/* Source Type Toggle */}
                 <div className="flex gap-2 mb-4">
                   <button onClick={() => setAdSourceType("upload")} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${adSourceType === "upload" ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"}`}>
                     📁 Upload Media
@@ -327,14 +332,13 @@ const AdminDashboard = () => {
                     🔗 Google Ads Link
                   </button>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Ad Title</Label>
                     <Input value={adTitle} onChange={e => setAdTitle(e.target.value)} placeholder="Ad title" className="rounded-xl h-10" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Link URL (where user goes on click)</Label>
+                    <Label className="text-sm">Link URL (click destination)</Label>
                     <Input value={adLinkUrl} onChange={e => setAdLinkUrl(e.target.value)} placeholder="https://example.com" className="rounded-xl h-10" />
                   </div>
                   <div className="space-y-1.5">
@@ -352,7 +356,6 @@ const AdminDashboard = () => {
                       <option value="popup">Popup</option>
                     </select>
                   </div>
-
                   {adSourceType === "upload" ? (
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label className="text-sm">Upload Image or Video</Label>
@@ -372,7 +375,6 @@ const AdminDashboard = () => {
                 </Button>
               </div>
 
-              {/* Ads List */}
               <div className="bg-card border border-border rounded-2xl shadow-card overflow-hidden">
                 <div className="p-6 border-b border-border">
                   <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
@@ -523,6 +525,48 @@ const AdminDashboard = () => {
                     </TableBody>
                   </Table>
                 </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Themes Tab */}
+          <TabsContent value="themes">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
+              <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2 mb-2">
+                <Palette className="h-5 w-5 text-accent" /> Festival Themes
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Select a theme to apply across the entire app for all users. Only one theme can be active at a time.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {FESTIVAL_THEMES.map(theme => {
+                  const isActive = activeTheme === theme.name;
+                  return (
+                    <button
+                      key={theme.name}
+                      onClick={() => handleSetTheme(theme.name)}
+                      disabled={themeSaving}
+                      className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
+                        isActive
+                          ? "border-accent bg-accent/10 shadow-sm"
+                          : "border-border hover:border-accent/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-2xl">{theme.icon}</span>
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">{theme.label}</p>
+                          <p className="text-xs text-muted-foreground">{theme.desc}</p>
+                        </div>
+                      </div>
+                      {isActive && (
+                        <span className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-bold animate-scale-in">
+                          ✓ ACTIVE
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </TabsContent>

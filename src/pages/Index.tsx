@@ -13,6 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import AdBanner, { AdPopup } from "@/components/AdBanner";
 import { MiniAvatar3D } from "@/components/Avatar3D";
 import { Button } from "@/components/ui/button";
+import FestivalOverlay from "@/components/FestivalOverlay";
 import {
   analyzeVideo,
   generateQuiz,
@@ -177,6 +178,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
+      <FestivalOverlay />
       <AdPopup />
 
       {/* Header */}
