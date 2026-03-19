@@ -40,410 +40,515 @@ export const OUTFIT_CATALOG: OutfitItem[] = [
   { id: "wings", name: "Battle Wings", icon: "🪽", xpRequired: 5000, xpCost: 2500, category: "accessory", colors: { body: "#f0abfc", accent: "#d946ef" } },
 ];
 
-// ── BGMI-style realistic human character ─────────────────────────────
+// ── Ultra-realistic human character ─────────────────────────────
 
 function HumanCharacter({ topColor, accentColor, detailColor }: { topColor: string; accentColor: string; detailColor?: string }) {
   const groupRef = useRef<THREE.Group>(null);
   const time = useRef(0);
   const armLRef = useRef<THREE.Group>(null);
   const armRRef = useRef<THREE.Group>(null);
+  const headRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
     time.current += delta;
     const t = time.current;
     if (groupRef.current) {
-      // Breathing + subtle weight shift
-      groupRef.current.position.y = Math.sin(t * 1.2) * 0.006;
-      groupRef.current.rotation.y = Math.sin(t * 0.3) * 0.015;
+      // Breathing + micro weight shift
+      groupRef.current.position.y = Math.sin(t * 1.4) * 0.005;
+      groupRef.current.rotation.y = Math.sin(t * 0.25) * 0.01;
+    }
+    if (headRef.current) {
+      // Subtle head bob
+      headRef.current.rotation.x = Math.sin(t * 0.6) * 0.008;
+      headRef.current.rotation.z = Math.sin(t * 0.4) * 0.005;
     }
     if (armLRef.current) {
-      armLRef.current.rotation.z = 0.06 + Math.sin(t * 0.7) * 0.025;
-      armLRef.current.rotation.x = Math.sin(t * 0.5) * 0.015;
+      armLRef.current.rotation.z = 0.05 + Math.sin(t * 0.6) * 0.02;
+      armLRef.current.rotation.x = Math.sin(t * 0.45) * 0.012;
     }
     if (armRRef.current) {
-      armRRef.current.rotation.z = -0.06 - Math.sin(t * 0.7 + 0.4) * 0.025;
-      armRRef.current.rotation.x = Math.sin(t * 0.5 + 0.6) * 0.015;
+      armRRef.current.rotation.z = -0.05 - Math.sin(t * 0.6 + 0.3) * 0.02;
+      armRRef.current.rotation.x = Math.sin(t * 0.45 + 0.5) * 0.012;
     }
   });
 
-  const skin = "#e8c4a0";
-  const skinMid = "#ddb48a";
-  const skinDark = "#c49a6c";
-  const lipColor = "#c4756e";
-  const hair = "#1a1a2e";
-  const pants = "#292524";
-  const shoes = "#1c1917";
+  const skin = "#dbb798";
+  const skinLight = "#e8cbb4";
+  const skinMid = "#cfa07a";
+  const skinDark = "#b8896a";
+  const lipColor = "#bf6b6b";
+  const lipDark = "#a35555";
+  const hair = "#1a1510";
+  const hairHighlight = "#2a2520";
+  const pants = "#262220";
+  const shoes = "#1a1714";
   const detail = detailColor || accentColor;
+  const eyeColor = "#5a7a4e";
 
   return (
     <group ref={groupRef}>
-      {/* ── HEAD ── Sculpted cranium + jaw for realistic shape */}
-      {/* Cranium */}
-      <mesh position={[0, 1.72, -0.01]}>
-        <sphereGeometry args={[0.21, 24, 24]} />
-        <meshStandardMaterial color={skin} roughness={0.48} />
+      <group ref={headRef}>
+        {/* ── HEAD ── Anatomically sculpted */}
+        {/* Cranium - main skull shape */}
+        <mesh position={[0, 1.72, -0.015]}>
+          <sphereGeometry args={[0.215, 32, 32]} />
+          <meshStandardMaterial color={skin} roughness={0.42} metalness={0.02} />
+        </mesh>
+        {/* Forehead prominence */}
+        <mesh position={[0, 1.8, 0.09]}>
+          <sphereGeometry args={[0.17, 24, 24]} />
+          <meshStandardMaterial color={skin} roughness={0.42} />
+        </mesh>
+        {/* Brow ridge */}
+        <mesh position={[0, 1.73, 0.14]} scale={[1.1, 0.35, 0.6]}>
+          <sphereGeometry args={[0.14, 16, 16]} />
+          <meshStandardMaterial color={skinMid} roughness={0.45} />
+        </mesh>
+        {/* Mid-face volume */}
+        <mesh position={[0, 1.645, 0.09]}>
+          <sphereGeometry args={[0.165, 24, 24]} />
+          <meshStandardMaterial color={skin} roughness={0.44} />
+        </mesh>
+        {/* Jaw - strong angular */}
+        <mesh position={[0, 1.545, 0.04]} scale={[1.05, 0.8, 0.92]}>
+          <sphereGeometry args={[0.155, 20, 20]} />
+          <meshStandardMaterial color={skin} roughness={0.46} />
+        </mesh>
+        {/* Jawline edges */}
+        {[-1, 1].map(s => (
+          <mesh key={`jaw${s}`} position={[s * 0.12, 1.55, 0.02]} rotation={[0, 0, s * 0.15]}>
+            <capsuleGeometry args={[0.025, 0.06, 6, 8]} />
+            <meshStandardMaterial color={skinMid} roughness={0.48} />
+          </mesh>
+        ))}
+        {/* Chin - defined */}
+        <mesh position={[0, 1.475, 0.11]}>
+          <sphereGeometry args={[0.058, 14, 14]} />
+          <meshStandardMaterial color={skinMid} roughness={0.46} />
+        </mesh>
+        {/* Chin cleft */}
+        <mesh position={[0, 1.47, 0.155]}>
+          <sphereGeometry args={[0.012, 6, 6]} />
+          <meshStandardMaterial color={skinDark} roughness={0.5} />
+        </mesh>
+        {/* Cheekbones - prominent */}
+        {[-1, 1].map(s => (
+          <mesh key={`cheek${s}`} position={[s * 0.135, 1.635, 0.115]}>
+            <sphereGeometry args={[0.055, 12, 12]} />
+            <meshStandardMaterial color={skinLight} roughness={0.4} />
+          </mesh>
+        ))}
+        {/* Cheek hollows */}
+        {[-1, 1].map(s => (
+          <mesh key={`chhollow${s}`} position={[s * 0.1, 1.58, 0.1]}>
+            <sphereGeometry args={[0.035, 8, 8]} />
+            <meshStandardMaterial color={skinDark} roughness={0.55} />
+          </mesh>
+        ))}
+        {/* Temple indents */}
+        {[-1, 1].map(s => (
+          <mesh key={`temple${s}`} position={[s * 0.19, 1.7, 0.04]}>
+            <sphereGeometry args={[0.03, 8, 8]} />
+            <meshStandardMaterial color={skinMid} roughness={0.5} />
+          </mesh>
+        ))}
+
+        {/* ── EYES ── Hyper-detailed with depth */}
+        {[-1, 1].map(side => (
+          <group key={`eye${side}`} position={[side * 0.076, 1.67, 0.16]}>
+            {/* Eye socket depth */}
+            <mesh position={[0, 0, -0.012]}>
+              <sphereGeometry args={[0.044, 14, 14]} />
+              <meshStandardMaterial color={skinDark} roughness={0.6} />
+            </mesh>
+            {/* Sclera (white) */}
+            <mesh>
+              <sphereGeometry args={[0.037, 18, 18]} />
+              <meshStandardMaterial color="#f2f0ec" roughness={0.12} />
+            </mesh>
+            {/* Iris - multi-layered */}
+            <mesh position={[0, 0, 0.024]}>
+              <sphereGeometry args={[0.021, 14, 14]} />
+              <meshStandardMaterial color={eyeColor} roughness={0.2} metalness={0.08} />
+            </mesh>
+            {/* Iris ring */}
+            <mesh position={[0, 0, 0.028]}>
+              <ringGeometry args={[0.015, 0.021, 16]} />
+              <meshStandardMaterial color="#3d5a30" roughness={0.2} side={THREE.DoubleSide} />
+            </mesh>
+            {/* Pupil */}
+            <mesh position={[0, 0, 0.035]}>
+              <circleGeometry args={[0.011, 14]} />
+              <meshStandardMaterial color="#080604" roughness={0.08} />
+            </mesh>
+            {/* Cornea reflection */}
+            <mesh position={[side * 0.007, 0.009, 0.039]}>
+              <circleGeometry args={[0.005, 8]} />
+              <meshStandardMaterial color="white" emissive="white" emissiveIntensity={0.8} transparent opacity={0.9} />
+            </mesh>
+            {/* Secondary reflection */}
+            <mesh position={[side * -0.004, -0.005, 0.038]}>
+              <circleGeometry args={[0.003, 6]} />
+              <meshStandardMaterial color="white" emissive="white" emissiveIntensity={0.4} transparent opacity={0.6} />
+            </mesh>
+            {/* Upper eyelid with crease */}
+            <mesh position={[0, 0.022, 0.012]} rotation={[0.28, 0, 0]} scale={[1.2, 0.42, 0.85]}>
+              <sphereGeometry args={[0.039, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+              <meshStandardMaterial color={skin} roughness={0.45} />
+            </mesh>
+            {/* Eyelid crease */}
+            <mesh position={[0, 0.032, 0.008]} rotation={[0.2, 0, 0]} scale={[1.15, 0.15, 0.5]}>
+              <sphereGeometry args={[0.04, 10, 10, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+              <meshStandardMaterial color={skinDark} roughness={0.5} />
+            </mesh>
+            {/* Lower eyelid */}
+            <mesh position={[0, -0.022, 0.012]} rotation={[-0.22, 0, 0]} scale={[1.1, 0.32, 0.7]}>
+              <sphereGeometry args={[0.037, 10, 10, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5]} />
+              <meshStandardMaterial color={skinMid} roughness={0.48} />
+            </mesh>
+            {/* Lash line - upper */}
+            <mesh position={[0, 0.028, 0.02]} rotation={[0.15, 0, 0]}>
+              <boxGeometry args={[0.068, 0.006, 0.008]} />
+              <meshStandardMaterial color={hair} roughness={0.7} />
+            </mesh>
+            {/* Individual lashes */}
+            {[-2, -1, 0, 1, 2].map(l => (
+              <mesh key={`lash${side}${l}`} position={[l * 0.012, 0.032, 0.025]} rotation={[0.5 + Math.abs(l) * 0.1, 0, l * 0.05]}>
+                <capsuleGeometry args={[0.002, 0.012, 2, 3]} />
+                <meshStandardMaterial color={hair} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+
+        {/* ── EYEBROWS ── Natural arch with individual hairs */}
+        {[-1, 1].map(side => (
+          <group key={`brow${side}`} position={[side * 0.076, 1.745, 0.16]}>
+            {/* Main brow body */}
+            <mesh rotation={[0, 0, side * 0.08]} scale={[1, 0.4, 0.6]}>
+              <capsuleGeometry args={[0.01, 0.055, 6, 8]} />
+              <meshStandardMaterial color={hair} roughness={0.75} />
+            </mesh>
+            {/* Brow tail */}
+            <mesh position={[side * 0.025, -0.005, 0]} rotation={[0, 0, side * 0.2]} scale={[1, 0.35, 0.5]}>
+              <capsuleGeometry args={[0.007, 0.03, 4, 6]} />
+              <meshStandardMaterial color={hair} roughness={0.75} />
+            </mesh>
+            {/* Hair strands */}
+            {[-1, 0, 1].map(h => (
+              <mesh key={`bh${h}`} position={[h * 0.012, 0.003, 0.002]} rotation={[0, 0, side * (0.05 + h * 0.04)]}>
+                <capsuleGeometry args={[0.003, 0.018, 2, 3]} />
+                <meshStandardMaterial color={hairHighlight} roughness={0.7} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+
+        {/* ── NOSE ── Anatomically correct */}
+        {/* Bridge */}
+        <mesh position={[0, 1.675, 0.195]} rotation={[0.25, 0, 0]}>
+          <capsuleGeometry args={[0.013, 0.065, 8, 10]} />
+          <meshStandardMaterial color={skin} roughness={0.45} />
+        </mesh>
+        {/* Nose body */}
+        <mesh position={[0, 1.625, 0.2]} rotation={[0.15, 0, 0]}>
+          <capsuleGeometry args={[0.018, 0.035, 6, 8]} />
+          <meshStandardMaterial color={skin} roughness={0.45} />
+        </mesh>
+        {/* Tip - rounded */}
+        <mesh position={[0, 1.6, 0.225]}>
+          <sphereGeometry args={[0.026, 12, 12]} />
+          <meshStandardMaterial color={skinMid} roughness={0.44} />
+        </mesh>
+        {/* Nostrils - carved */}
+        {[-1, 1].map(s => (
+          <group key={`nos${s}`}>
+            <mesh position={[s * 0.02, 1.588, 0.218]}>
+              <sphereGeometry args={[0.014, 8, 8]} />
+              <meshStandardMaterial color={skinMid} roughness={0.5} />
+            </mesh>
+            <mesh position={[s * 0.016, 1.585, 0.225]}>
+              <sphereGeometry args={[0.006, 6, 6]} />
+              <meshStandardMaterial color={skinDark} roughness={0.6} />
+            </mesh>
+          </group>
+        ))}
+        {/* Nasolabial folds */}
+        {[-1, 1].map(s => (
+          <mesh key={`nlf${s}`} position={[s * 0.04, 1.56, 0.17]} rotation={[0.1, 0, s * 0.05]}>
+            <capsuleGeometry args={[0.004, 0.04, 3, 4]} />
+            <meshStandardMaterial color={skinDark} roughness={0.55} transparent opacity={0.5} />
+          </mesh>
+        ))}
+
+        {/* ── MOUTH ── Detailed lip sculpture */}
+        {/* Upper lip - cupid's bow */}
+        <mesh position={[0, 1.535, 0.175]} rotation={[0.08, 0, 0]} scale={[1, 0.55, 1]}>
+          <torusGeometry args={[0.026, 0.009, 8, 16, Math.PI]} />
+          <meshStandardMaterial color={lipColor} roughness={0.32} />
+        </mesh>
+        {/* Cupid's bow peak */}
+        <mesh position={[0, 1.543, 0.19]}>
+          <sphereGeometry args={[0.006, 6, 6]} />
+          <meshStandardMaterial color={lipColor} roughness={0.3} />
+        </mesh>
+        {/* Lower lip - fuller */}
+        <mesh position={[0, 1.52, 0.175]} rotation={[-0.12, 0, Math.PI]} scale={[1, 0.5, 1]}>
+          <torusGeometry args={[0.024, 0.011, 8, 16, Math.PI]} />
+          <meshStandardMaterial color={lipColor} roughness={0.3} />
+        </mesh>
+        {/* Lip crease line */}
+        <mesh position={[0, 1.528, 0.19]}>
+          <boxGeometry args={[0.042, 0.003, 0.003]} />
+          <meshStandardMaterial color={lipDark} roughness={0.4} />
+        </mesh>
+        {/* Lip corners */}
+        {[-1, 1].map(s => (
+          <mesh key={`lipc${s}`} position={[s * 0.025, 1.528, 0.18]}>
+            <sphereGeometry args={[0.005, 6, 6]} />
+            <meshStandardMaterial color={skinDark} roughness={0.5} />
+          </mesh>
+        ))}
+        {/* Philtrum */}
+        <mesh position={[0, 1.555, 0.19]} rotation={[0.2, 0, 0]}>
+          <boxGeometry args={[0.012, 0.025, 0.006]} />
+          <meshStandardMaterial color={skinMid} roughness={0.5} transparent opacity={0.3} />
+        </mesh>
+
+        {/* ── EARS ── Detailed with cartilage */}
+        {[-1, 1].map(side => (
+          <group key={`ear${side}`} position={[side * 0.215, 1.66, -0.025]}>
+            {/* Outer ear */}
+            <mesh rotation={[0, side * 0.25, 0]}>
+              <capsuleGeometry args={[0.028, 0.05, 8, 10]} />
+              <meshStandardMaterial color={skin} roughness={0.5} />
+            </mesh>
+            {/* Inner ear (concha) */}
+            <mesh position={[side * -0.005, 0, 0.006]} rotation={[0, side * 0.2, 0]}>
+              <capsuleGeometry args={[0.016, 0.028, 6, 8]} />
+              <meshStandardMaterial color={skinDark} roughness={0.55} />
+            </mesh>
+            {/* Tragus */}
+            <mesh position={[side * -0.01, -0.005, 0.012]}>
+              <sphereGeometry args={[0.008, 6, 6]} />
+              <meshStandardMaterial color={skin} roughness={0.5} />
+            </mesh>
+            {/* Earlobe */}
+            <mesh position={[side * 0.002, -0.032, 0.005]}>
+              <sphereGeometry args={[0.012, 6, 6]} />
+              <meshStandardMaterial color={skinLight} roughness={0.45} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* ── HAIR ── Multi-layered realistic style */}
+        {/* Main hair volume */}
+        <mesh position={[0, 1.83, -0.02]}>
+          <sphereGeometry args={[0.235, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+          <meshStandardMaterial color={hair} roughness={0.7} />
+        </mesh>
+        {/* Side volume */}
+        {[-1, 1].map(s => (
+          <mesh key={`shair${s}`} position={[s * 0.185, 1.71, -0.05]}>
+            <capsuleGeometry args={[0.058, 0.085, 8, 10]} />
+            <meshStandardMaterial color={hair} roughness={0.7} />
+          </mesh>
+        ))}
+        {/* Back volume */}
+        <mesh position={[0, 1.71, -0.145]}>
+          <capsuleGeometry args={[0.115, 0.13, 10, 10]} />
+          <meshStandardMaterial color={hair} roughness={0.7} />
+        </mesh>
+        {/* Top texture strands */}
+        {[-0.08, -0.02, 0.04, 0.09].map((x, i) => (
+          <mesh key={`strand${i}`} position={[x, 1.85, 0.04 + i * 0.01]} rotation={[0.3 + i * 0.08, i * 0.1, (i - 1.5) * 0.06]}>
+            <capsuleGeometry args={[0.012, 0.06, 4, 5]} />
+            <meshStandardMaterial color={i % 2 === 0 ? hair : hairHighlight} roughness={0.65} />
+          </mesh>
+        ))}
+        {/* Fringe */}
+        <mesh position={[-0.05, 1.81, 0.15]} rotation={[0.45, 0.12, 0.08]}>
+          <capsuleGeometry args={[0.025, 0.07, 5, 7]} />
+          <meshStandardMaterial color={hair} roughness={0.65} />
+        </mesh>
+        <mesh position={[0.03, 1.82, 0.155]} rotation={[0.38, -0.08, -0.06]}>
+          <capsuleGeometry args={[0.022, 0.06, 5, 7]} />
+          <meshStandardMaterial color={hairHighlight} roughness={0.65} />
+        </mesh>
+      </group>
+
+      {/* ── NECK ── Anatomical with Adam's apple */}
+      <mesh position={[0, 1.42, 0]}>
+        <cylinderGeometry args={[0.078, 0.098, 0.15, 16]} />
+        <meshStandardMaterial color={skin} roughness={0.46} />
       </mesh>
-      {/* Forehead */}
-      <mesh position={[0, 1.78, 0.08]}>
-        <sphereGeometry args={[0.18, 20, 20]} />
-        <meshStandardMaterial color={skin} roughness={0.48} />
-      </mesh>
-      {/* Mid-face */}
-      <mesh position={[0, 1.64, 0.08]}>
-        <sphereGeometry args={[0.17, 20, 20]} />
-        <meshStandardMaterial color={skin} roughness={0.5} />
-      </mesh>
-      {/* Jaw */}
-      <mesh position={[0, 1.54, 0.04]} scale={[1, 0.85, 0.9]}>
-        <sphereGeometry args={[0.16, 18, 18]} />
-        <meshStandardMaterial color={skin} roughness={0.5} />
-      </mesh>
-      {/* Chin */}
-      <mesh position={[0, 1.48, 0.1]}>
-        <sphereGeometry args={[0.065, 12, 12]} />
-        <meshStandardMaterial color={skinMid} roughness={0.5} />
-      </mesh>
-      {/* Cheekbones */}
-      {[-1, 1].map((s) => (
-        <mesh key={`cheek${s}`} position={[s * 0.13, 1.63, 0.1]}>
-          <sphereGeometry args={[0.06, 10, 10]} />
+      {/* SCM muscles */}
+      {[-1, 1].map(s => (
+        <mesh key={`scm${s}`} position={[s * 0.055, 1.4, 0.035]} rotation={[0.12, 0, s * 0.08]}>
+          <capsuleGeometry args={[0.014, 0.1, 5, 7]} />
           <meshStandardMaterial color={skinMid} roughness={0.5} />
         </mesh>
       ))}
-
-      {/* ── EYES ── Detailed with eyelids, lashes */}
-      {[-1, 1].map((side) => (
-        <group key={`eye${side}`} position={[side * 0.075, 1.67, 0.155]}>
-          {/* Eye socket shadow */}
-          <mesh position={[0, 0, -0.005]}>
-            <sphereGeometry args={[0.042, 12, 12]} />
-            <meshStandardMaterial color={skinDark} roughness={0.6} />
-          </mesh>
-          {/* Eyeball */}
-          <mesh>
-            <sphereGeometry args={[0.036, 14, 14]} />
-            <meshStandardMaterial color="#f5f5f0" roughness={0.15} />
-          </mesh>
-          {/* Iris */}
-          <mesh position={[0, 0, 0.025]}>
-            <sphereGeometry args={[0.02, 12, 12]} />
-            <meshStandardMaterial color="#5d4e37" roughness={0.25} metalness={0.1} />
-          </mesh>
-          {/* Pupil */}
-          <mesh position={[0, 0, 0.035]}>
-            <sphereGeometry args={[0.011, 10, 10]} />
-            <meshStandardMaterial color="#0c0a09" roughness={0.1} />
-          </mesh>
-          {/* Cornea highlight */}
-          <mesh position={[side * 0.008, 0.01, 0.038]}>
-            <sphereGeometry args={[0.006, 6, 6]} />
-            <meshStandardMaterial color="white" emissive="white" emissiveIntensity={0.6} transparent opacity={0.9} />
-          </mesh>
-          {/* Upper eyelid */}
-          <mesh position={[0, 0.02, 0.01]} rotation={[0.25, 0, 0]} scale={[1.15, 0.4, 0.8]}>
-            <sphereGeometry args={[0.038, 10, 10, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
-            <meshStandardMaterial color={skin} roughness={0.5} />
-          </mesh>
-          {/* Lower eyelid */}
-          <mesh position={[0, -0.02, 0.01]} rotation={[-0.2, 0, 0]} scale={[1.1, 0.3, 0.7]}>
-            <sphereGeometry args={[0.036, 10, 10, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5]} />
-            <meshStandardMaterial color={skinMid} roughness={0.5} />
-          </mesh>
-          {/* Eyelash line */}
-          <mesh position={[0, 0.028, 0.018]} rotation={[0.15, 0, 0]}>
-            <boxGeometry args={[0.065, 0.005, 0.008]} />
-            <meshStandardMaterial color={hair} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* ── EYEBROWS ── Thicker, natural arch */}
-      {[-1, 1].map((side) => (
-        <group key={`brow${side}`} position={[side * 0.075, 1.74, 0.16]}>
-          <mesh rotation={[0, 0, side * 0.1]}>
-            <capsuleGeometry args={[0.008, 0.05, 4, 6]} />
-            <meshStandardMaterial color={hair} roughness={0.8} />
-          </mesh>
-          <mesh position={[side * 0.02, 0.003, 0]} rotation={[0, 0, side * 0.2]}>
-            <capsuleGeometry args={[0.006, 0.03, 4, 6]} />
-            <meshStandardMaterial color={hair} roughness={0.8} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* ── NOSE ── Multi-part sculpted */}
-      {/* Nose bridge */}
-      <mesh position={[0, 1.67, 0.19]} rotation={[0.3, 0, 0]}>
-        <capsuleGeometry args={[0.015, 0.06, 6, 8]} />
-        <meshStandardMaterial color={skin} roughness={0.5} />
+      {/* Adam's apple */}
+      <mesh position={[0, 1.42, 0.075]}>
+        <sphereGeometry args={[0.015, 8, 8]} />
+        <meshStandardMaterial color={skinMid} roughness={0.48} />
       </mesh>
-      {/* Nose tip */}
-      <mesh position={[0, 1.6, 0.22]}>
-        <sphereGeometry args={[0.028, 10, 10]} />
-        <meshStandardMaterial color={skinMid} roughness={0.5} />
-      </mesh>
-      {/* Nostrils */}
-      {[-1, 1].map((s) => (
-        <mesh key={`nostril${s}`} position={[s * 0.018, 1.585, 0.215]}>
-          <sphereGeometry args={[0.012, 6, 6]} />
-          <meshStandardMaterial color={skinDark} roughness={0.6} />
+      {/* Clavicle hints */}
+      {[-1, 1].map(s => (
+        <mesh key={`clav${s}`} position={[s * 0.12, 1.35, 0.06]} rotation={[0, 0, s * 0.3]}>
+          <capsuleGeometry args={[0.012, 0.08, 4, 6]} />
+          <meshStandardMaterial color={skin} roughness={0.5} />
         </mesh>
       ))}
 
-      {/* ── MOUTH ── Upper & lower lip */}
-      {/* Upper lip */}
-      <mesh position={[0, 1.535, 0.17]} rotation={[0.1, 0, 0]} scale={[1, 0.6, 1]}>
-        <torusGeometry args={[0.028, 0.008, 6, 14, Math.PI]} />
-        <meshStandardMaterial color={lipColor} roughness={0.4} />
-      </mesh>
-      {/* Lower lip */}
-      <mesh position={[0, 1.52, 0.17]} rotation={[-0.15, 0, Math.PI]} scale={[1, 0.5, 1]}>
-        <torusGeometry args={[0.025, 0.009, 6, 14, Math.PI]} />
-        <meshStandardMaterial color={lipColor} roughness={0.35} />
-      </mesh>
-      {/* Lip line */}
-      <mesh position={[0, 1.528, 0.185]}>
-        <boxGeometry args={[0.045, 0.003, 0.004]} />
-        <meshStandardMaterial color={skinDark} roughness={0.5} />
-      </mesh>
-
-      {/* ── EARS ── Sculpted with inner detail */}
-      {[-1, 1].map((side) => (
-        <group key={`ear${side}`} position={[side * 0.21, 1.65, -0.02]}>
-          <mesh rotation={[0, side * 0.2, 0]}>
-            <capsuleGeometry args={[0.03, 0.05, 6, 8]} />
-            <meshStandardMaterial color={skin} roughness={0.55} />
-          </mesh>
-          <mesh position={[side * -0.005, 0, 0.005]} rotation={[0, side * 0.2, 0]}>
-            <capsuleGeometry args={[0.018, 0.03, 4, 6]} />
-            <meshStandardMaterial color={skinDark} roughness={0.6} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* ── HAIR ── Layered, styled */}
-      {/* Main cap */}
-      <mesh position={[0, 1.82, -0.02]}>
-        <sphereGeometry args={[0.23, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-        <meshStandardMaterial color={hair} roughness={0.65} />
-      </mesh>
-      {/* Side volume */}
-      {[-1, 1].map((s) => (
-        <mesh key={`shair${s}`} position={[s * 0.18, 1.7, -0.05]}>
-          <capsuleGeometry args={[0.06, 0.08, 6, 8]} />
-          <meshStandardMaterial color={hair} roughness={0.65} />
-        </mesh>
-      ))}
-      {/* Back */}
-      <mesh position={[0, 1.7, -0.14]}>
-        <capsuleGeometry args={[0.12, 0.12, 8, 8]} />
-        <meshStandardMaterial color={hair} roughness={0.65} />
-      </mesh>
-      {/* Front fringe */}
-      <mesh position={[-0.06, 1.8, 0.14]} rotation={[0.4, 0.15, 0.1]}>
-        <capsuleGeometry args={[0.03, 0.08, 4, 6]} />
-        <meshStandardMaterial color={hair} roughness={0.65} />
-      </mesh>
-      <mesh position={[0.04, 1.81, 0.15]} rotation={[0.35, -0.1, -0.08]}>
-        <capsuleGeometry args={[0.025, 0.07, 4, 6]} />
-        <meshStandardMaterial color={hair} roughness={0.65} />
-      </mesh>
-
-      {/* ── NECK ── With trapezius muscles */}
-      <mesh position={[0, 1.42, 0]}>
-        <cylinderGeometry args={[0.08, 0.1, 0.14, 14]} />
-        <meshStandardMaterial color={skin} roughness={0.5} />
-      </mesh>
-      {/* Neck tendons */}
-      {[-1, 1].map((s) => (
-        <mesh key={`tendon${s}`} position={[s * 0.06, 1.39, 0.03]} rotation={[0.15, 0, s * 0.1]}>
-          <capsuleGeometry args={[0.015, 0.1, 4, 6]} />
-          <meshStandardMaterial color={skinMid} roughness={0.55} />
-        </mesh>
-      ))}
-
-      {/* ── TORSO ── Muscular upper body */}
-      {/* Main chest */}
+      {/* ── TORSO ── Athletic build */}
       <mesh position={[0, 1.18, 0]}>
-        <capsuleGeometry args={[0.2, 0.28, 12, 14]} />
-        <meshStandardMaterial color={topColor} roughness={0.5} metalness={0.05} />
+        <capsuleGeometry args={[0.2, 0.3, 14, 16]} />
+        <meshStandardMaterial color={topColor} roughness={0.48} metalness={0.03} />
       </mesh>
-      {/* Shoulders */}
-      {[-1, 1].map((s) => (
-        <mesh key={`shoulder${s}`} position={[s * 0.22, 1.28, 0]}>
-          <sphereGeometry args={[0.08, 10, 10]} />
+      {/* Shoulder caps */}
+      {[-1, 1].map(s => (
+        <mesh key={`shcap${s}`} position={[s * 0.225, 1.3, 0]}>
+          <sphereGeometry args={[0.075, 12, 12]} />
+          <meshStandardMaterial color={topColor} roughness={0.48} />
+        </mesh>
+      ))}
+      {/* Chest definition */}
+      {[-1, 1].map(s => (
+        <mesh key={`pec${s}`} position={[s * 0.08, 1.23, 0.165]} scale={[1, 0.65, 0.45]}>
+          <sphereGeometry args={[0.075, 10, 10]} />
           <meshStandardMaterial color={topColor} roughness={0.5} />
         </mesh>
       ))}
-      {/* Chest pecs shape */}
-      {[-1, 1].map((s) => (
-        <mesh key={`pec${s}`} position={[s * 0.08, 1.22, 0.16]} scale={[1, 0.7, 0.5]}>
-          <sphereGeometry args={[0.08, 8, 8]} />
-          <meshStandardMaterial color={topColor} roughness={0.5} />
-        </mesh>
-      ))}
-      {/* Collar */}
-      <mesh position={[0, 1.34, 0.08]} rotation={[0.4, 0, 0]}>
-        <torusGeometry args={[0.1, 0.02, 6, 14, Math.PI]} />
+      {/* Collar neckline */}
+      <mesh position={[0, 1.34, 0.08]} rotation={[0.35, 0, 0]}>
+        <torusGeometry args={[0.1, 0.018, 8, 16, Math.PI]} />
         <meshStandardMaterial color={accentColor} roughness={0.5} />
       </mesh>
-      {/* Pocket details */}
+      {/* Chest pocket with stitching */}
       <mesh position={[-0.1, 1.2, 0.19]}>
-        <boxGeometry args={[0.07, 0.055, 0.012]} />
+        <boxGeometry args={[0.065, 0.05, 0.01]} />
         <meshStandardMaterial color={detail} roughness={0.6} />
+      </mesh>
+      <mesh position={[-0.1, 1.225, 0.197]}>
+        <boxGeometry args={[0.065, 0.008, 0.012]} />
+        <meshStandardMaterial color={accentColor} roughness={0.5} />
       </mesh>
       <mesh position={[0.1, 1.2, 0.19]}>
-        <boxGeometry args={[0.07, 0.055, 0.012]} />
+        <boxGeometry args={[0.065, 0.05, 0.01]} />
         <meshStandardMaterial color={detail} roughness={0.6} />
       </mesh>
-      {/* Pocket flaps */}
-      <mesh position={[-0.1, 1.23, 0.197]}>
-        <boxGeometry args={[0.07, 0.012, 0.014]} />
-        <meshStandardMaterial color={accentColor} roughness={0.5} />
-      </mesh>
-      <mesh position={[0.1, 1.23, 0.197]}>
-        <boxGeometry args={[0.07, 0.012, 0.014]} />
-        <meshStandardMaterial color={accentColor} roughness={0.5} />
+      {/* Zipper line */}
+      <mesh position={[0, 1.18, 0.195]}>
+        <boxGeometry args={[0.008, 0.2, 0.006]} />
+        <meshStandardMaterial color={accentColor} roughness={0.3} metalness={0.4} />
       </mesh>
 
-      {/* ── WAIST / BELT ── */}
-      <mesh position={[0, 0.9, 0]}>
-        <cylinderGeometry args={[0.19, 0.18, 0.06, 14]} />
-        <meshStandardMaterial color="#44403c" roughness={0.3} metalness={0.3} />
+      {/* ── BELT ── */}
+      <mesh position={[0, 0.92, 0]}>
+        <cylinderGeometry args={[0.19, 0.185, 0.055, 16]} />
+        <meshStandardMaterial color="#3d3530" roughness={0.3} metalness={0.25} />
       </mesh>
-      <mesh position={[0, 0.9, 0.18]}>
-        <boxGeometry args={[0.05, 0.04, 0.015]} />
-        <meshStandardMaterial color="#d4d4d8" roughness={0.2} metalness={0.7} />
+      <mesh position={[0, 0.92, 0.185]}>
+        <boxGeometry args={[0.048, 0.038, 0.014]} />
+        <meshStandardMaterial color="#c4c0b8" roughness={0.15} metalness={0.75} />
       </mesh>
-      {/* Belt loops */}
-      {[-1, 0, 1].map((i) => (
-        <mesh key={`bl${i}`} position={[i * 0.1, 0.9, 0.175]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.015, 0.05, 0.008]} />
-          <meshStandardMaterial color="#57534e" roughness={0.4} />
-        </mesh>
-      ))}
 
-      {/* ── ARMS ── Muscular with defined segments */}
-      <group ref={armLRef} position={[-0.3, 1.26, 0]}>
-        {/* Deltoid */}
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.06, 8, 8]} />
-          <meshStandardMaterial color={topColor} roughness={0.5} />
-        </mesh>
-        {/* Upper arm (bicep) */}
-        <mesh position={[-0.03, -0.12, 0]}>
-          <capsuleGeometry args={[0.06, 0.18, 8, 10]} />
-          <meshStandardMaterial color={topColor} roughness={0.5} />
-        </mesh>
+      {/* ── ARMS ── Muscular, defined */}
+      <group ref={armLRef} position={[-0.3, 1.28, 0]}>
+        <mesh><sphereGeometry args={[0.058, 10, 10]} /><meshStandardMaterial color={topColor} roughness={0.48} /></mesh>
+        <mesh position={[-0.025, -0.12, 0]}><capsuleGeometry args={[0.058, 0.18, 10, 12]} /><meshStandardMaterial color={topColor} roughness={0.48} /></mesh>
+        {/* Sleeve end */}
+        <mesh position={[-0.03, -0.22, 0]}><cylinderGeometry args={[0.058, 0.055, 0.02, 10]} /><meshStandardMaterial color={accentColor} roughness={0.45} /></mesh>
         {/* Elbow */}
-        <mesh position={[-0.04, -0.24, 0]}>
-          <sphereGeometry args={[0.045, 6, 6]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
+        <mesh position={[-0.035, -0.25, 0]}><sphereGeometry args={[0.042, 8, 8]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
         {/* Forearm */}
-        <mesh position={[-0.05, -0.36, 0]}>
-          <capsuleGeometry args={[0.045, 0.18, 6, 8]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
+        <mesh position={[-0.04, -0.37, 0]}><capsuleGeometry args={[0.042, 0.18, 8, 10]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
         {/* Wrist */}
-        <mesh position={[-0.055, -0.48, 0]}>
-          <cylinderGeometry args={[0.032, 0.038, 0.04, 8]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
+        <mesh position={[-0.045, -0.49, 0]}><cylinderGeometry args={[0.03, 0.036, 0.035, 10]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
         {/* Hand */}
-        <mesh position={[-0.055, -0.52, 0.01]} scale={[0.8, 1, 0.5]}>
-          <sphereGeometry args={[0.04, 8, 8]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
-        {/* Fingers hint */}
-        {[0, 1, 2, 3].map((f) => (
-          <mesh key={`fl${f}`} position={[-0.055 + (f - 1.5) * 0.012, -0.565, 0.015]}>
-            <capsuleGeometry args={[0.006, 0.025, 3, 4]} />
-            <meshStandardMaterial color={skin} roughness={0.5} />
+        <mesh position={[-0.045, -0.525, 0.01]} scale={[0.8, 1, 0.5]}><sphereGeometry args={[0.038, 10, 10]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
+        {[0, 1, 2, 3].map(f => (
+          <mesh key={`fl${f}`} position={[-0.045 + (f - 1.5) * 0.011, -0.57, 0.015]}>
+            <capsuleGeometry args={[0.005, 0.028, 3, 4]} />
+            <meshStandardMaterial color={skin} roughness={0.46} />
           </mesh>
         ))}
+        {/* Thumb */}
+        <mesh position={[-0.02, -0.54, 0.025]} rotation={[0, 0, 0.4]}>
+          <capsuleGeometry args={[0.006, 0.022, 3, 4]} />
+          <meshStandardMaterial color={skin} roughness={0.46} />
+        </mesh>
       </group>
 
-      <group ref={armRRef} position={[0.3, 1.26, 0]}>
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.06, 8, 8]} />
-          <meshStandardMaterial color={topColor} roughness={0.5} />
-        </mesh>
-        <mesh position={[0.03, -0.12, 0]}>
-          <capsuleGeometry args={[0.06, 0.18, 8, 10]} />
-          <meshStandardMaterial color={topColor} roughness={0.5} />
-        </mesh>
-        <mesh position={[0.04, -0.24, 0]}>
-          <sphereGeometry args={[0.045, 6, 6]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
-        <mesh position={[0.05, -0.36, 0]}>
-          <capsuleGeometry args={[0.045, 0.18, 6, 8]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
-        <mesh position={[0.055, -0.48, 0]}>
-          <cylinderGeometry args={[0.032, 0.038, 0.04, 8]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
-        <mesh position={[0.055, -0.52, 0.01]} scale={[0.8, 1, 0.5]}>
-          <sphereGeometry args={[0.04, 8, 8]} />
-          <meshStandardMaterial color={skin} roughness={0.5} />
-        </mesh>
-        {[0, 1, 2, 3].map((f) => (
-          <mesh key={`fr${f}`} position={[0.055 + (f - 1.5) * -0.012, -0.565, 0.015]}>
-            <capsuleGeometry args={[0.006, 0.025, 3, 4]} />
-            <meshStandardMaterial color={skin} roughness={0.5} />
+      <group ref={armRRef} position={[0.3, 1.28, 0]}>
+        <mesh><sphereGeometry args={[0.058, 10, 10]} /><meshStandardMaterial color={topColor} roughness={0.48} /></mesh>
+        <mesh position={[0.025, -0.12, 0]}><capsuleGeometry args={[0.058, 0.18, 10, 12]} /><meshStandardMaterial color={topColor} roughness={0.48} /></mesh>
+        <mesh position={[0.03, -0.22, 0]}><cylinderGeometry args={[0.058, 0.055, 0.02, 10]} /><meshStandardMaterial color={accentColor} roughness={0.45} /></mesh>
+        <mesh position={[0.035, -0.25, 0]}><sphereGeometry args={[0.042, 8, 8]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
+        <mesh position={[0.04, -0.37, 0]}><capsuleGeometry args={[0.042, 0.18, 8, 10]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
+        <mesh position={[0.045, -0.49, 0]}><cylinderGeometry args={[0.03, 0.036, 0.035, 10]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
+        <mesh position={[0.045, -0.525, 0.01]} scale={[0.8, 1, 0.5]}><sphereGeometry args={[0.038, 10, 10]} /><meshStandardMaterial color={skin} roughness={0.46} /></mesh>
+        {[0, 1, 2, 3].map(f => (
+          <mesh key={`fr${f}`} position={[0.045 + (f - 1.5) * -0.011, -0.57, 0.015]}>
+            <capsuleGeometry args={[0.005, 0.028, 3, 4]} />
+            <meshStandardMaterial color={skin} roughness={0.46} />
           </mesh>
         ))}
+        <mesh position={[0.02, -0.54, 0.025]} rotation={[0, 0, -0.4]}>
+          <capsuleGeometry args={[0.006, 0.022, 3, 4]} />
+          <meshStandardMaterial color={skin} roughness={0.46} />
+        </mesh>
       </group>
 
-      {/* ── LEGS ── Muscular with knee detail */}
-      {[-1, 1].map((side) => (
+      {/* ── LEGS ── Athletic with realistic details */}
+      {[-1, 1].map(side => (
         <group key={`leg${side}`}>
           {/* Thigh */}
-          <mesh position={[side * 0.1, 0.62, 0]}>
-            <capsuleGeometry args={[0.085, 0.24, 8, 10]} />
-            <meshStandardMaterial color={pants} roughness={0.65} />
-          </mesh>
-          {/* Knee */}
-          <mesh position={[side * 0.1, 0.46, 0.04]}>
-            <sphereGeometry args={[0.055, 8, 8]} />
+          <mesh position={[side * 0.1, 0.63, 0]}>
+            <capsuleGeometry args={[0.082, 0.24, 10, 12]} />
             <meshStandardMaterial color={pants} roughness={0.6} />
           </mesh>
-          {/* Knee pad */}
-          <mesh position={[side * 0.1, 0.46, 0.08]}>
-            <sphereGeometry args={[0.035, 6, 6]} />
-            <meshStandardMaterial color="#57534e" roughness={0.4} metalness={0.1} />
+          {/* Knee */}
+          <mesh position={[side * 0.1, 0.46, 0.035]}>
+            <sphereGeometry args={[0.052, 10, 10]} />
+            <meshStandardMaterial color={pants} roughness={0.55} />
           </mesh>
-          {/* Shin / calf */}
+          {/* Knee pad */}
+          <mesh position={[side * 0.1, 0.46, 0.075]}>
+            <sphereGeometry args={[0.032, 8, 8]} />
+            <meshStandardMaterial color="#4a443e" roughness={0.35} metalness={0.1} />
+          </mesh>
+          {/* Shin */}
           <mesh position={[side * 0.1, 0.3, 0]}>
-            <capsuleGeometry args={[0.065, 0.18, 6, 8]} />
-            <meshStandardMaterial color={pants} roughness={0.65} />
+            <capsuleGeometry args={[0.062, 0.18, 8, 10]} />
+            <meshStandardMaterial color={pants} roughness={0.6} />
           </mesh>
           {/* Ankle */}
           <mesh position={[side * 0.1, 0.18, 0]}>
-            <sphereGeometry args={[0.04, 6, 6]} />
-            <meshStandardMaterial color={pants} roughness={0.6} />
+            <sphereGeometry args={[0.038, 8, 8]} />
+            <meshStandardMaterial color={pants} roughness={0.55} />
           </mesh>
-          {/* Boots - upper */}
+          {/* Boot - upper */}
           <mesh position={[side * 0.1, 0.14, 0.02]}>
-            <cylinderGeometry args={[0.055, 0.06, 0.08, 10]} />
-            <meshStandardMaterial color={shoes} roughness={0.35} metalness={0.1} />
+            <cylinderGeometry args={[0.052, 0.058, 0.08, 12]} />
+            <meshStandardMaterial color={shoes} roughness={0.3} metalness={0.08} />
           </mesh>
           {/* Boot body */}
           <mesh position={[side * 0.1, 0.09, 0.03]}>
-            <boxGeometry args={[0.12, 0.08, 0.17]} />
-            <meshStandardMaterial color={shoes} roughness={0.35} metalness={0.1} />
+            <boxGeometry args={[0.115, 0.075, 0.165]} />
+            <meshStandardMaterial color={shoes} roughness={0.3} metalness={0.08} />
           </mesh>
           {/* Sole */}
           <mesh position={[side * 0.1, 0.05, 0.035]}>
-            <boxGeometry args={[0.13, 0.03, 0.19]} />
-            <meshStandardMaterial color="#0c0a09" roughness={0.9} />
+            <boxGeometry args={[0.125, 0.028, 0.185]} />
+            <meshStandardMaterial color="#0a0908" roughness={0.9} />
           </mesh>
-          {/* Boot lace detail */}
+          {/* Lace detail */}
           <mesh position={[side * 0.1, 0.12, 0.1]}>
-            <boxGeometry args={[0.03, 0.06, 0.005]} />
-            <meshStandardMaterial color="#44403c" roughness={0.5} />
+            <boxGeometry args={[0.025, 0.055, 0.004]} />
+            <meshStandardMaterial color="#3a3530" roughness={0.5} />
           </mesh>
         </group>
       ))}
