@@ -91,6 +91,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_themes: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          theme_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          theme_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          theme_name?: string
+        }
+        Relationships: []
+      }
       challenges: {
         Row: {
           created_at: string
@@ -320,6 +341,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_theme: { Args: { _theme_name: string }; Returns: undefined }
       add_xp: {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
