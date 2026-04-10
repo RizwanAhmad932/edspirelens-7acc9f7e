@@ -14,11 +14,14 @@ import ThemeToggle from "@/components/ThemeToggle";
 const FESTIVAL_THEMES = [
   { name: "none", label: "No Theme", icon: "❌", desc: "Default look" },
   { name: "republic_day", label: "Republic Day", icon: "🇮🇳", desc: "Tricolor flags & Ashoka Chakra" },
+  { name: "independence_day", label: "Independence Day", icon: "🇮🇳", desc: "Tricolor, kites & Jai Hind" },
   { name: "eid", label: "Eid", icon: "🌙", desc: "Crescent moon, stars & Eid Mubarak" },
   { name: "diwali", label: "Diwali", icon: "🪔", desc: "Diyas, fireworks & lights" },
   { name: "dussehra", label: "Dussehra", icon: "🏹", desc: "Fire effects & victory theme" },
   { name: "holi", label: "Holi", icon: "🎨", desc: "Color splashes everywhere" },
+  { name: "navratri", label: "Navratri", icon: "💃", desc: "Garba dance & vibrant colors" },
   { name: "christmas", label: "Christmas", icon: "🎄", desc: "Snowfall & Santa flying" },
+  { name: "new_year", label: "New Year", icon: "🎉", desc: "Confetti & fireworks" },
 ];
 
 const AdminDashboard = () => {
@@ -99,12 +102,11 @@ const AdminDashboard = () => {
   const loadAds = async () => {
     const { data } = await supabase.from("ads").select("*").order("created_at", { ascending: false });
     setAds(data || []);
-    const { data: events } = await supabase.from("ad_events").select("ad_id, event_type");
+    // Use server-side RPC for accurate counts (bypasses 1000-row limit)
+    const { data: stats } = await supabase.rpc("get_ad_stats");
     const counts: Record<string, { views: number; clicks: number }> = {};
-    (events || []).forEach((e: any) => {
-      if (!counts[e.ad_id]) counts[e.ad_id] = { views: 0, clicks: 0 };
-      if (e.event_type === "view") counts[e.ad_id].views++;
-      if (e.event_type === "click") counts[e.ad_id].clicks++;
+    (stats || []).forEach((s: any) => {
+      counts[s.ad_id] = { views: Number(s.views) || 0, clicks: Number(s.clicks) || 0 };
     });
     setAdEventCounts(counts);
   };
@@ -390,13 +392,14 @@ const AdminDashboard = () => {
                         <TableHead>Type</TableHead>
                         <TableHead><Eye className="h-3.5 w-3.5 inline mr-1" />Views</TableHead>
                         <TableHead><MousePointer className="h-3.5 w-3.5 inline mr-1" />Clicks</TableHead>
+                        <TableHead>CTR</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {ads.length === 0 ? (
-                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No ads yet</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No ads yet</TableCell></TableRow>
                       ) : ads.map((ad: any) => (
                         <TableRow key={ad.id}>
                           <TableCell>
@@ -412,6 +415,9 @@ const AdminDashboard = () => {
                           <TableCell className="text-xs capitalize">{ad.ad_type} / {ad.placement}</TableCell>
                           <TableCell className="text-sm font-semibold">{adEventCounts[ad.id]?.views || 0}</TableCell>
                           <TableCell className="text-sm font-semibold">{adEventCounts[ad.id]?.clicks || 0}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {adEventCounts[ad.id]?.views ? ((adEventCounts[ad.id].clicks / adEventCounts[ad.id].views) * 100).toFixed(1) + "%" : "—"}
+                          </TableCell>
                           <TableCell>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${ad.is_active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>
                               {ad.is_active ? "Active" : "Inactive"}

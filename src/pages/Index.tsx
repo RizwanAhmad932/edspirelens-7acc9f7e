@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { Sparkles, Loader2, LogOut, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import edspireLogo from "@/assets/edspire-logo.png";
 import VideoInput from "@/components/VideoInput";
-import FloatingLens from "@/components/FloatingLens";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import AudioPlayer from "@/components/AudioPlayer";
 import HistorySection from "@/components/HistorySection";
@@ -13,7 +12,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import AdBanner, { AdPopup } from "@/components/AdBanner";
 import { MiniAvatar3D } from "@/components/Avatar3D";
 import { Button } from "@/components/ui/button";
-import FestivalOverlay from "@/components/FestivalOverlay";
 import {
   analyzeVideo,
   generateQuiz,
@@ -24,6 +22,9 @@ import {
   QuizQuestion,
   Flashcard,
 } from "@/lib/mockData";
+
+const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
+const FloatingLens = lazy(() => import("@/components/FloatingLens"));
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -178,7 +179,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
-      <FestivalOverlay />
+      <Suspense fallback={null}><FestivalOverlay /></Suspense>
       <AdPopup />
 
       {/* Header */}
@@ -259,19 +260,21 @@ const Index = () => {
       </main>
 
       {currentAnalysis && (
-        <FloatingLens
-          isOpen={lensOpen}
-          onClose={() => setLensOpen(false)}
-          summary={currentAnalysis.summary}
-          notes={currentAnalysis.notes}
-          transcript={currentAnalysis.transcript}
-          quiz={quiz}
-          quizLoading={quizLoading}
-          flashcards={flashcards}
-          flashcardsLoading={flashcardsLoading}
-          videoTitle={currentAnalysis.video_title}
-          onQuizComplete={handleQuizComplete}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>}>
+          <FloatingLens
+            isOpen={lensOpen}
+            onClose={() => setLensOpen(false)}
+            summary={currentAnalysis.summary}
+            notes={currentAnalysis.notes}
+            transcript={currentAnalysis.transcript}
+            quiz={quiz}
+            quizLoading={quizLoading}
+            flashcards={flashcards}
+            flashcardsLoading={flashcardsLoading}
+            videoTitle={currentAnalysis.video_title}
+            onQuizComplete={handleQuizComplete}
+          />
+        </Suspense>
       )}
     </div>
   );
