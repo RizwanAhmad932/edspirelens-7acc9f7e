@@ -25,16 +25,6 @@ import {
 
 const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
 const FloatingLens = lazy(() => import("@/components/FloatingLens"));
-import {
-  analyzeVideo,
-  generateQuiz,
-  generateFlashcards,
-  fetchHistory,
-  updateQuizScore,
-  VideoAnalysis,
-  QuizQuestion,
-  Flashcard,
-} from "@/lib/mockData";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
