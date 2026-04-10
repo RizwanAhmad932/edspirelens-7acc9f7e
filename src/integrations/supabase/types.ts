@@ -346,6 +346,14 @@ export type Database = {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
       }
+      get_ad_stats: {
+        Args: never
+        Returns: {
+          ad_id: string
+          clicks: number
+          views: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
