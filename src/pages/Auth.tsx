@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft, GraduationCap, Phone, Target, BookOpen } from "lucide-react";
 import edspireLogo from "@/assets/edspire-logo.png";
+import { lovable } from "@/integrations/lovable/index";
 
 type AuthView = "login" | "signup" | "forgot";
 
