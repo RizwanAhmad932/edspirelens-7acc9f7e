@@ -180,6 +180,7 @@ const Index = () => {
   return (
     <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
       <Suspense fallback={null}><FestivalOverlay /></Suspense>
+      <AdPopup />
 
       {/* Header */}
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 safe-top animate-fade-in">
