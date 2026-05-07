@@ -315,23 +315,32 @@ Return:
       const transcriptText = body.transcript;
       if (!transcriptText) return new Response(JSON.stringify({ error: "No transcript provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+      // Scale question count by transcript length (rough proxy for video length)
+      // ~150 words/min: 30k chars ≈ 1hr. Min 20, max 50.
+      const len = transcriptText.length;
+      let targetCount = 20;
+      if (len > 8000) targetCount = 30;
+      if (len > 18000) targetCount = 40;
+      if (len > 30000) targetCount = 50;
+
       const quizResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "You are a CBSE quiz generator. Generate questions ONLY from topics the teacher discusses in this specific video. Do NOT add questions from unrelated NCERT chapters or sections not covered in the video." },
+          { role: "system", content: `You are an exam quiz generator. Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video. Do NOT add questions from unrelated NCERT chapters or sections not covered in the video. Cover the full breadth of the video — beginning to end.` },
           {
             role: "user",
-            content: `Extract ALL questions STRICTLY from this video transcript. Include:
+            content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
 1. Every question the teacher explicitly asks students
 2. Every problem/example the teacher solves
 3. Every concept-check or discussion question
-4. Additional comprehension questions — but ONLY about topics covered in THIS video
+4. Additional comprehension, application, and HOTS questions — but ONLY about topics covered in THIS video
 
 Do NOT create questions about NCERT topics not discussed by the teacher.
 Each question should have 4 options with exactly one correct answer.
+Return EXACTLY ${targetCount} questions — no more, no less.
 
 Transcript:
-${transcriptText.substring(0, 15000)}`,
+${transcriptText.substring(0, 35000)}`,
           },
         ],
         [{
@@ -360,6 +369,97 @@ ${transcriptText.substring(0, 15000)}`,
 
       const quiz = parseToolResponse(await quizResponse.json());
       return new Response(JSON.stringify(quiz), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "generate-infographic") {
+      const { chapterTitle, summary } = body;
+      if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const prompt = `Create a visually rich, colorful educational INFOGRAPHIC poster for the chapter "${chapterTitle}".
+Include:
+- Bold chapter title at the top
+- 5-7 key concept boxes with short labels and icons
+- Clean diagrams, arrows, and color-coded sections
+- Modern flat illustration style, vibrant colors, white background
+- Text should be CRISP and READABLE
+
+Key topics to cover:
+${(summary || []).slice(0, 10).join("\n- ")}
+
+Style: textbook-quality educational infographic, clean layout, professional, suitable for students.`;
+
+      const imgResp = await aiImageCall(LOVABLE_API_KEY, prompt);
+      if (!imgResp.ok) {
+        const errResp = handleAIError(imgResp);
+        if (errResp) return errResp;
+        throw new Error(`Image AI error: ${imgResp.status}`);
+      }
+      const imgData = await imgResp.json();
+      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!imageUrl) throw new Error("No infographic image returned");
+      return new Response(JSON.stringify({ imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "generate-pyq") {
+      const { chapterTitle, transcript: transcriptText, board, exam } = body;
+      if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const examLabel = exam || board || "CBSE Board";
+      const pyqResp = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You are an expert ${examLabel} exam analyst. You write Previous Year Question (PYQ)-style questions in the EXACT style, format, marking scheme, and difficulty of past ${examLabel} exams. Tag each question with a plausible exam year (last 10 years).` },
+          { role: "user", content: `Generate 12-15 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
+Mix of:
+- 1-mark MCQs / very short answer
+- 2-mark short answer
+- 3-mark questions
+- 5-mark long answer
+
+For each question include: year (e.g. "2023"), marks, question text, and a brief model answer / answer hint.
+
+Reference video transcript (do not deviate from chapter scope):
+${(transcriptText || "").substring(0, 8000)}` }
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_pyq",
+            description: "Return PYQ-style questions",
+            parameters: {
+              type: "object",
+              properties: {
+                board: { type: "string" },
+                questions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      year: { type: "string" },
+                      marks: { type: "number" },
+                      question: { type: "string" },
+                      answer: { type: "string" },
+                    },
+                    required: ["year", "marks", "question", "answer"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["board", "questions"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_pyq" } }
+      );
+
+      if (!pyqResp.ok) {
+        const errResp = handleAIError(pyqResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${pyqResp.status}`);
+      }
+      const pyq = parseToolResponse(await pyqResp.json());
+      return new Response(JSON.stringify(pyq), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "generate-flashcards") {
