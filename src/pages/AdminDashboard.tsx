@@ -629,6 +629,86 @@ const AdminDashboard = () => {
               </div>
             </div>
           </TabsContent>
+
+          {/* Apps Tab */}
+          <TabsContent value="apps">
+            <div className="space-y-4">
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-card space-y-3">
+                <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                  <LayoutGrid className="h-5 w-5 text-accent" /> Add App Shortcut
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  These appear in the user's app drawer (bottom-right floating button).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Name</Label>
+                    <Input value={scName} onChange={e => setScName(e.target.value)} placeholder="e.g. NCERT PDF" />
+                  </div>
+                  <div>
+                    <Label>App URL</Label>
+                    <Input value={scUrl} onChange={e => setScUrl(e.target.value)} placeholder="https://..." />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <select
+                      value={scCategory}
+                      onChange={e => setScCategory(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {["Study", "Tools", "Games", "Reference", "Practice", "Other"].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Sort order</Label>
+                    <Input type="number" value={scOrder} onChange={e => setScOrder(e.target.value)} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Icon</Label>
+                    <Input
+                      ref={scFileRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setScIconFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleCreateShortcut} disabled={scSaving} className="gap-2 gradient-primary text-primary-foreground">
+                  {scSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Add App
+                </Button>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl shadow-card overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h3 className="font-display text-base font-bold text-foreground">All App Shortcuts</h3>
+                </div>
+                {shortcuts.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-muted-foreground">No shortcuts yet.</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {shortcuts.map((s: any) => (
+                      <div key={s.id} className="flex items-center gap-3 p-3">
+                        <img src={s.icon_url} alt={s.name} className="h-10 w-10 rounded-lg object-cover border border-border" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{s.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{s.category} · {s.app_url}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => toggleShortcut(s.id, s.is_active)}>
+                          {s.is_active ? "Active" : "Disabled"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => deleteShortcut(s.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
     </div>
