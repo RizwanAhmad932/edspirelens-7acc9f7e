@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette } from "lucide-react";
+import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette, LayoutGrid } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import edspireLogo from "@/assets/edspire-logo.png";
@@ -35,6 +35,16 @@ const AdminDashboard = () => {
   const [activeTheme, setActiveTheme] = useState("none");
   const [themeSaving, setThemeSaving] = useState(false);
   const navigate = useNavigate();
+
+  // App shortcut form state
+  const [shortcuts, setShortcuts] = useState<any[]>([]);
+  const [scName, setScName] = useState("");
+  const [scUrl, setScUrl] = useState("");
+  const [scCategory, setScCategory] = useState("Study");
+  const [scOrder, setScOrder] = useState("0");
+  const [scIconFile, setScIconFile] = useState<File | null>(null);
+  const [scSaving, setScSaving] = useState(false);
+  const scFileRef = useRef<HTMLInputElement>(null);
 
   // Ad form state
   const [adTitle, setAdTitle] = useState("");
@@ -76,8 +86,50 @@ const AdminDashboard = () => {
     setLoginLogs(data.loginLogs || []);
     setStats(data.stats || { totalUsers: 0, todayLogins: 0, totalLogins: 0 });
     setUsers(data.users || []);
-    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme()]);
+    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme(), loadShortcuts()]);
     setLoading(false);
+  };
+
+  const loadShortcuts = async () => {
+    const { data } = await supabase
+      .from("app_shortcuts")
+      .select("*")
+      .order("category", { ascending: true })
+      .order("sort_order", { ascending: true });
+    setShortcuts(data || []);
+  };
+
+  const handleCreateShortcut = async () => {
+    if (!scName || !scUrl || !scIconFile) { toast.error("Name, URL, and icon are required"); return; }
+    setScSaving(true);
+    try {
+      const ext = scIconFile.name.split(".").pop();
+      const path = `shortcut-${Date.now()}.${ext}`;
+      const { error: uErr } = await supabase.storage.from("app-icons").upload(path, scIconFile);
+      if (uErr) throw uErr;
+      const { data: u } = supabase.storage.from("app-icons").getPublicUrl(path);
+      const { error } = await supabase.from("app_shortcuts").insert({
+        name: scName, app_url: scUrl, icon_url: u.publicUrl,
+        category: scCategory, sort_order: parseInt(scOrder) || 0,
+      });
+      if (error) throw error;
+      toast.success("App added!");
+      setScName(""); setScUrl(""); setScOrder("0"); setScIconFile(null);
+      if (scFileRef.current) scFileRef.current.value = "";
+      await loadShortcuts();
+    } catch (e: any) { toast.error(e.message || "Failed"); }
+    finally { setScSaving(false); }
+  };
+
+  const toggleShortcut = async (id: string, active: boolean) => {
+    await supabase.from("app_shortcuts").update({ is_active: !active }).eq("id", id);
+    await loadShortcuts();
+  };
+
+  const deleteShortcut = async (id: string) => {
+    await supabase.from("app_shortcuts").delete().eq("id", id);
+    await loadShortcuts();
+    toast.success("Removed");
   };
 
   const loadActiveTheme = async () => {
