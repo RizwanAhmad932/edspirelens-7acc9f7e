@@ -91,6 +91,42 @@ export type Database = {
         }
         Relationships: []
       }
+      app_shortcuts: {
+        Row: {
+          app_url: string
+          category: string
+          created_at: string
+          icon_url: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          app_url: string
+          category?: string
+          created_at?: string
+          icon_url: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          app_url?: string
+          category?: string
+          created_at?: string
+          icon_url?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_themes: {
         Row: {
           created_at: string
