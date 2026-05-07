@@ -287,12 +287,13 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 bg-secondary/50 rounded-lg h-9 sm:h-10">
+          <TabsList className="w-full grid grid-cols-6 bg-secondary/50 rounded-lg h-9 sm:h-10">
             <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3" /><span className="hidden sm:inline">Users</span></TabsTrigger>
             <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3" /><span className="hidden sm:inline">Logins</span></TabsTrigger>
             <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3" /><span className="hidden sm:inline">Ads</span></TabsTrigger>
             <TabsTrigger value="challenges" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Trophy className="h-3 w-3" /><span className="hidden sm:inline">Challenges</span></TabsTrigger>
             <TabsTrigger value="themes" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Palette className="h-3 w-3" /><span className="hidden sm:inline">Themes</span></TabsTrigger>
+            <TabsTrigger value="apps" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><LayoutGrid className="h-3 w-3" /><span className="hidden sm:inline">Apps</span></TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
