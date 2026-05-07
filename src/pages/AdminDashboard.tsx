@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette } from "lucide-react";
+import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette, LayoutGrid } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import edspireLogo from "@/assets/edspire-logo.png";
@@ -35,6 +35,16 @@ const AdminDashboard = () => {
   const [activeTheme, setActiveTheme] = useState("none");
   const [themeSaving, setThemeSaving] = useState(false);
   const navigate = useNavigate();
+
+  // App shortcut form state
+  const [shortcuts, setShortcuts] = useState<any[]>([]);
+  const [scName, setScName] = useState("");
+  const [scUrl, setScUrl] = useState("");
+  const [scCategory, setScCategory] = useState("Study");
+  const [scOrder, setScOrder] = useState("0");
+  const [scIconFile, setScIconFile] = useState<File | null>(null);
+  const [scSaving, setScSaving] = useState(false);
+  const scFileRef = useRef<HTMLInputElement>(null);
 
   // Ad form state
   const [adTitle, setAdTitle] = useState("");
@@ -76,8 +86,50 @@ const AdminDashboard = () => {
     setLoginLogs(data.loginLogs || []);
     setStats(data.stats || { totalUsers: 0, todayLogins: 0, totalLogins: 0 });
     setUsers(data.users || []);
-    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme()]);
+    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme(), loadShortcuts()]);
     setLoading(false);
+  };
+
+  const loadShortcuts = async () => {
+    const { data } = await supabase
+      .from("app_shortcuts")
+      .select("*")
+      .order("category", { ascending: true })
+      .order("sort_order", { ascending: true });
+    setShortcuts(data || []);
+  };
+
+  const handleCreateShortcut = async () => {
+    if (!scName || !scUrl || !scIconFile) { toast.error("Name, URL, and icon are required"); return; }
+    setScSaving(true);
+    try {
+      const ext = scIconFile.name.split(".").pop();
+      const path = `shortcut-${Date.now()}.${ext}`;
+      const { error: uErr } = await supabase.storage.from("app-icons").upload(path, scIconFile);
+      if (uErr) throw uErr;
+      const { data: u } = supabase.storage.from("app-icons").getPublicUrl(path);
+      const { error } = await supabase.from("app_shortcuts").insert({
+        name: scName, app_url: scUrl, icon_url: u.publicUrl,
+        category: scCategory, sort_order: parseInt(scOrder) || 0,
+      });
+      if (error) throw error;
+      toast.success("App added!");
+      setScName(""); setScUrl(""); setScOrder("0"); setScIconFile(null);
+      if (scFileRef.current) scFileRef.current.value = "";
+      await loadShortcuts();
+    } catch (e: any) { toast.error(e.message || "Failed"); }
+    finally { setScSaving(false); }
+  };
+
+  const toggleShortcut = async (id: string, active: boolean) => {
+    await supabase.from("app_shortcuts").update({ is_active: !active }).eq("id", id);
+    await loadShortcuts();
+  };
+
+  const deleteShortcut = async (id: string) => {
+    await supabase.from("app_shortcuts").delete().eq("id", id);
+    await loadShortcuts();
+    toast.success("Removed");
   };
 
   const loadActiveTheme = async () => {
@@ -235,12 +287,13 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 bg-secondary/50 rounded-lg h-9 sm:h-10">
+          <TabsList className="w-full grid grid-cols-6 bg-secondary/50 rounded-lg h-9 sm:h-10">
             <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3" /><span className="hidden sm:inline">Users</span></TabsTrigger>
             <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3" /><span className="hidden sm:inline">Logins</span></TabsTrigger>
             <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3" /><span className="hidden sm:inline">Ads</span></TabsTrigger>
             <TabsTrigger value="challenges" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Trophy className="h-3 w-3" /><span className="hidden sm:inline">Challenges</span></TabsTrigger>
             <TabsTrigger value="themes" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Palette className="h-3 w-3" /><span className="hidden sm:inline">Themes</span></TabsTrigger>
+            <TabsTrigger value="apps" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><LayoutGrid className="h-3 w-3" /><span className="hidden sm:inline">Apps</span></TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -573,6 +626,86 @@ const AdminDashboard = () => {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Apps Tab */}
+          <TabsContent value="apps">
+            <div className="space-y-4">
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-card space-y-3">
+                <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                  <LayoutGrid className="h-5 w-5 text-accent" /> Add App Shortcut
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  These appear in the user's app drawer (bottom-right floating button).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Name</Label>
+                    <Input value={scName} onChange={e => setScName(e.target.value)} placeholder="e.g. NCERT PDF" />
+                  </div>
+                  <div>
+                    <Label>App URL</Label>
+                    <Input value={scUrl} onChange={e => setScUrl(e.target.value)} placeholder="https://..." />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <select
+                      value={scCategory}
+                      onChange={e => setScCategory(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {["Study", "Tools", "Games", "Reference", "Practice", "Other"].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Sort order</Label>
+                    <Input type="number" value={scOrder} onChange={e => setScOrder(e.target.value)} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Icon</Label>
+                    <Input
+                      ref={scFileRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setScIconFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleCreateShortcut} disabled={scSaving} className="gap-2 gradient-primary text-primary-foreground">
+                  {scSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Add App
+                </Button>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl shadow-card overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h3 className="font-display text-base font-bold text-foreground">All App Shortcuts</h3>
+                </div>
+                {shortcuts.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-muted-foreground">No shortcuts yet.</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {shortcuts.map((s: any) => (
+                      <div key={s.id} className="flex items-center gap-3 p-3">
+                        <img src={s.icon_url} alt={s.name} className="h-10 w-10 rounded-lg object-cover border border-border" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{s.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{s.category} · {s.app_url}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => toggleShortcut(s.id, s.is_active)}>
+                          {s.is_active ? "Active" : "Disabled"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => deleteShortcut(s.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

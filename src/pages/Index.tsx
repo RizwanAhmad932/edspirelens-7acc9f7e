@@ -25,6 +25,7 @@ import {
 
 const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
 const FloatingLens = lazy(() => import("@/components/FloatingLens"));
+const AppDrawer = lazy(() => import("@/components/AppDrawer"));
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -276,6 +277,8 @@ const Index = () => {
           />
         </Suspense>
       )}
+
+      <Suspense fallback={null}><AppDrawer /></Suspense>
     </div>
   );
 };

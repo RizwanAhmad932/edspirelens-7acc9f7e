@@ -32,6 +32,13 @@ export interface Flashcard {
   back: string;
 }
 
+export interface PYQQuestion {
+  year: string;
+  marks: number;
+  question: string;
+  answer: string;
+}
+
 export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: { videoUrl, action: "analyze" },
@@ -78,6 +85,34 @@ export async function generateFlashcards(transcript: TranscriptSegment[]): Promi
   if (error) throw new Error(error.message || "Failed to generate flashcards");
   if (data?.error) throw new Error(data.error);
   return data.flashcards || [];
+}
+
+export async function generateInfographic(chapterTitle: string, summary: string[]): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: { videoUrl: "", action: "generate-infographic", chapterTitle, summary },
+  });
+  if (error) throw new Error(error.message || "Failed to generate infographic");
+  if (data?.error) throw new Error(data.error);
+  return data.imageUrl;
+}
+
+export async function generatePYQ(
+  chapterTitle: string,
+  transcript: TranscriptSegment[],
+  exam: string,
+): Promise<{ board: string; questions: PYQQuestion[] }> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: {
+      videoUrl: "",
+      action: "generate-pyq",
+      chapterTitle,
+      transcript: transcript.map((s) => s.text).join(" "),
+      exam,
+    },
+  });
+  if (error) throw new Error(error.message || "Failed to generate PYQ");
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 export async function fetchHistory(): Promise<VideoAnalysis[]> {
