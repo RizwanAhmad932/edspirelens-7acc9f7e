@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award } from "lucide-react";
+import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SummaryPanel from "./SummaryPanel";
 import NotesPanel from "./NotesPanel";
@@ -9,6 +9,7 @@ import FlashcardPanel from "./FlashcardPanel";
 import ChatPanel from "./ChatPanel";
 import InfographicPanel from "./InfographicPanel";
 import PYQPanel from "./PYQPanel";
+import TeacherNotesPanel from "./TeacherNotesPanel";
 import { TranscriptSegment, QuizQuestion, Flashcard } from "@/lib/mockData";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -24,9 +25,10 @@ interface FloatingLensProps {
   flashcardsLoading?: boolean;
   videoTitle: string;
   onQuizComplete?: (score: number, total: number) => void;
+  analysisId?: string;
 }
 
-const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizLoading, flashcards, flashcardsLoading, videoTitle, onQuizComplete }: FloatingLensProps) => {
+const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizLoading, flashcards, flashcardsLoading, videoTitle, onQuizComplete, analysisId }: FloatingLensProps) => {
   const [minimized, setMinimized] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
