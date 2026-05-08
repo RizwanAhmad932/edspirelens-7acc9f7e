@@ -213,3 +213,15 @@
     animation: shimmer 2s infinite;
   }
 }
+
+/* Mascot avatar animations */
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+@keyframes mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+.mascot-float { animation: mascot-float 3.5s ease-in-out infinite; transform-origin: center; }
+.mascot-eyes { animation: mascot-blink 4s infinite; transform-origin: center; transform-box: fill-box; }
