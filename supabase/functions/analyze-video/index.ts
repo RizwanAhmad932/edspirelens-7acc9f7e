@@ -506,6 +506,57 @@ ${transcriptText.substring(0, 10000)}`,
       return new Response(JSON.stringify(fc), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "teacher-notes") {
+      const { chapterTitle, transcript: transcriptText } = body;
+      if (!transcriptText) return new Response(JSON.stringify({ error: "transcript required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const tnResp = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
+          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, and 2-6 bullet points exactly as the teacher would write them. Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 20000)}` }
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_board_notes",
+            description: "Return verbatim teacher board notes",
+            parameters: {
+              type: "object",
+              properties: {
+                blocks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      timestamp: { type: "string" },
+                      heading: { type: "string" },
+                      bullets: { type: "array", items: { type: "string" } },
+                      formula: { type: "string" },
+                      diagram: { type: "string" },
+                    },
+                    required: ["heading"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["blocks"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_board_notes" } }
+      );
+
+      if (!tnResp.ok) {
+        const errResp = handleAIError(tnResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${tnResp.status}`);
+      }
+      const result = parseToolResponse(await tnResp.json());
+      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "chat") {
       const { messages, videoTitle: title, transcript: transcriptText } = body;
 

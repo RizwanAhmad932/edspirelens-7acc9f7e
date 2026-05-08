@@ -1,16 +1,16 @@
 import { useState, useEffect, lazy, Suspense, memo } from "react";
-import { Sparkles, Loader2, LogOut, Shield } from "lucide-react";
+import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import edspireLogo from "@/assets/edspire-logo.png";
+import { useAppLogo } from "@/hooks/use-app-logo";
 import VideoInput from "@/components/VideoInput";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import AudioPlayer from "@/components/AudioPlayer";
 import HistorySection from "@/components/HistorySection";
 import ThemeToggle from "@/components/ThemeToggle";
 import AdBanner, { AdPopup } from "@/components/AdBanner";
-import { MiniAvatar3D } from "@/components/Avatar3D";
+import { MiniMascot } from "@/components/MascotAvatar";
 import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
@@ -40,8 +40,8 @@ const Index = () => {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userOutfit, setUserOutfit] = useState({ top: "tshirt_white", hat: "none_hat", accessory: "none_acc" });
   const navigate = useNavigate();
+  const logo = useAppLogo();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -81,19 +81,8 @@ const Index = () => {
     if (user) {
       loadHistory();
       checkAdmin();
-      loadOutfit();
     }
   }, [user]);
-
-  const loadOutfit = async () => {
-    const { data } = await supabase.from("profiles").select("selected_avatar").eq("id", user.id).single();
-    if (data?.selected_avatar) {
-      try {
-        const parsed = JSON.parse(data.selected_avatar);
-        if (parsed?.top) setUserOutfit(parsed);
-      } catch {}
-    }
-  };
 
   const checkAdmin = async () => {
     const { data } = await supabase
@@ -187,7 +176,7 @@ const Index = () => {
       <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 safe-top animate-fade-in">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <img src={edspireLogo} alt="Edspire Lens" className="h-7 w-7 sm:h-10 sm:w-10 object-contain shrink-0" />
+            <img src={logo} alt="Edspire Lens" className="h-7 w-7 sm:h-10 sm:w-10 object-contain shrink-0" />
             <h1 className="font-display text-base sm:text-xl font-bold text-foreground truncate">
               Edspire <span className="text-gradient">Lens</span>
             </h1>
@@ -206,8 +195,11 @@ const Index = () => {
                 <Shield className="h-4 w-4" />
               </Button>
             )}
+            <Button variant="ghost" size="icon" onClick={() => navigate("/analytics")} className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-accent" title="Performance">
+              <TrendingUp className="h-4 w-4" />
+            </Button>
             <button onClick={() => navigate("/profile")} className="hover:opacity-80 transition-opacity" title="Profile">
-              <MiniAvatar3D outfit={userOutfit} />
+              <MiniMascot />
             </button>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1 sm:gap-1.5 text-muted-foreground hover:text-foreground h-8 sm:h-9 px-2 sm:px-3">
@@ -225,15 +217,15 @@ const Index = () => {
           <div className="text-center space-y-3 sm:space-y-6 max-w-2xl mx-auto pt-2 sm:pt-8 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-accent/10 text-accent text-xs sm:text-sm font-medium animate-scale-in">
               <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              AI-Powered Video Analysis
+              Your AI Study Companion for Every Lecture
             </div>
             <h2 className="font-display text-2xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight">
-              Understand any video
+              Turn any lecture into
               <br />
-              <span className="text-gradient">in seconds</span>
+              <span className="text-gradient">complete chapter mastery</span>
             </h2>
             <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto px-4 sm:px-0">
-              Paste a video link and let Edspire Lens extract detailed notes, quizzes, flashcards aligned to your board's syllabus.
+              Paste any YouTube lecture and get the teacher's board notes, infographics, board-aligned quizzes, PYQs and a personal AI tutor — instantly.
             </p>
           </div>
         )}
@@ -273,6 +265,7 @@ const Index = () => {
             flashcards={flashcards}
             flashcardsLoading={flashcardsLoading}
             videoTitle={currentAnalysis.video_title}
+            analysisId={currentAnalysis.id}
             onQuizComplete={handleQuizComplete}
           />
         </Suspense>

@@ -39,6 +39,14 @@ export interface PYQQuestion {
   answer: string;
 }
 
+export interface TeacherNoteBlock {
+  timestamp?: string;
+  heading: string;
+  bullets?: string[];
+  formula?: string;
+  diagram?: string;
+}
+
 export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: { videoUrl, action: "analyze" },
@@ -113,6 +121,46 @@ export async function generatePYQ(
   if (error) throw new Error(error.message || "Failed to generate PYQ");
   if (data?.error) throw new Error(data.error);
   return data;
+}
+
+export async function generateTeacherNotes(
+  chapterTitle: string,
+  transcript: TranscriptSegment[],
+): Promise<TeacherNoteBlock[]> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: {
+      videoUrl: "",
+      action: "teacher-notes",
+      chapterTitle,
+      transcript: transcript.map((s) => `[${s.timestamp}] ${s.text}`).join("\n"),
+    },
+  });
+  if (error) throw new Error(error.message || "Failed to extract teacher notes");
+  if (data?.error) throw new Error(data.error);
+  return data.blocks || [];
+}
+
+export async function recordQuizAttempt(payload: {
+  analysisId?: string;
+  videoTitle: string;
+  topic?: string;
+  question: string;
+  selectedAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("quiz_attempts").insert({
+    user_id: user.id,
+    analysis_id: payload.analysisId || null,
+    video_title: payload.videoTitle,
+    topic: payload.topic || payload.videoTitle,
+    question: payload.question,
+    selected_answer: payload.selectedAnswer,
+    correct_answer: payload.correctAnswer,
+    is_correct: payload.isCorrect,
+  });
 }
 
 export async function fetchHistory(): Promise<VideoAnalysis[]> {

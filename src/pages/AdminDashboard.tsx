@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette, LayoutGrid } from "lucide-react";
+import { Loader2, ArrowLeft, Users, Clock, Shield, Activity, Plus, Trash2, Eye, MousePointer, Image, Video, Megaphone, Trophy, X, Palette, LayoutGrid, ImagePlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import edspireLogo from "@/assets/edspire-logo.png";
+import { useAppLogo, refreshAppLogos } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const FESTIVAL_THEMES = [
@@ -25,6 +25,7 @@ const FESTIVAL_THEMES = [
 ];
 
 const AdminDashboard = () => {
+  const headerLogo = useAppLogo();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loginLogs, setLoginLogs] = useState<any[]>([]);
@@ -66,6 +67,12 @@ const AdminDashboard = () => {
   const [chGoalType, setChGoalType] = useState("study_minutes");
   const [chGoalTarget, setChGoalTarget] = useState("");
 
+  // Logo upload state
+  const [logoLight, setLogoLight] = useState<File | null>(null);
+  const [logoDark, setLogoDark] = useState<File | null>(null);
+  const [logoSaving, setLogoSaving] = useState(false);
+  const [currentLogos, setCurrentLogos] = useState<{ light: string | null; dark: string | null }>({ light: null, dark: null });
+
   useEffect(() => { checkAdminAndLoad(); }, []);
 
   const checkAdminAndLoad = async () => {
@@ -86,8 +93,42 @@ const AdminDashboard = () => {
     setLoginLogs(data.loginLogs || []);
     setStats(data.stats || { totalUsers: 0, todayLogins: 0, totalLogins: 0 });
     setUsers(data.users || []);
-    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme(), loadShortcuts()]);
+    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme(), loadShortcuts(), loadLogos()]);
     setLoading(false);
+  };
+
+  const loadLogos = async () => {
+    const { data } = await supabase.from("app_settings").select("logo_light_url, logo_dark_url").eq("id", "global").maybeSingle();
+    setCurrentLogos({ light: data?.logo_light_url || null, dark: data?.logo_dark_url || null });
+  };
+
+  const uploadLogo = async (file: File, variant: "light" | "dark") => {
+    const ext = file.name.split(".").pop();
+    const path = `logo-${variant}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("app-logos").upload(path, file, { upsert: true });
+    if (upErr) throw upErr;
+    const { data } = supabase.storage.from("app-logos").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleSaveLogos = async () => {
+    if (!logoLight && !logoDark) { toast.error("Choose at least one logo file"); return; }
+    setLogoSaving(true);
+    try {
+      const update: any = { id: "global", updated_at: new Date().toISOString() };
+      if (logoLight) update.logo_light_url = await uploadLogo(logoLight, "light");
+      if (logoDark) update.logo_dark_url = await uploadLogo(logoDark, "dark");
+      const { error } = await supabase.from("app_settings").upsert(update, { onConflict: "id" });
+      if (error) throw error;
+      toast.success("Logos updated!");
+      setLogoLight(null); setLogoDark(null);
+      await loadLogos();
+      await refreshAppLogos();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to upload logos");
+    } finally {
+      setLogoSaving(false);
+    }
   };
 
   const loadShortcuts = async () => {
@@ -256,7 +297,7 @@ const AdminDashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-9 w-9">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <img src={edspireLogo} alt="Edspire Lens" className="h-8 w-8 object-contain" />
+            <img src={headerLogo} alt="Edspire Lens" className="h-8 w-8 object-contain" />
             <h1 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
               <Shield className="h-4 w-4 text-accent" />
               Admin Panel
@@ -287,13 +328,14 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-6 bg-secondary/50 rounded-lg h-9 sm:h-10">
+          <TabsList className="w-full grid grid-cols-7 bg-secondary/50 rounded-lg h-9 sm:h-10">
             <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3" /><span className="hidden sm:inline">Users</span></TabsTrigger>
             <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3" /><span className="hidden sm:inline">Logins</span></TabsTrigger>
             <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3" /><span className="hidden sm:inline">Ads</span></TabsTrigger>
             <TabsTrigger value="challenges" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Trophy className="h-3 w-3" /><span className="hidden sm:inline">Challenges</span></TabsTrigger>
             <TabsTrigger value="themes" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Palette className="h-3 w-3" /><span className="hidden sm:inline">Themes</span></TabsTrigger>
             <TabsTrigger value="apps" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><LayoutGrid className="h-3 w-3" /><span className="hidden sm:inline">Apps</span></TabsTrigger>
+            <TabsTrigger value="branding" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><ImagePlus className="h-3 w-3" /><span className="hidden sm:inline">Logo</span></TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -707,6 +749,40 @@ const AdminDashboard = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </TabsContent>
+
+          {/* Branding / Logo Tab */}
+          <TabsContent value="branding">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-card space-y-5">
+              <div>
+                <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                  <ImagePlus className="h-5 w-5 text-accent" /> App Logo
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload separate logos for light and dark themes. PNG with transparent background recommended.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 p-3 rounded-xl border border-border bg-secondary/30">
+                  <Label className="text-sm">Light theme logo</Label>
+                  <div className="h-20 flex items-center justify-center bg-white rounded-lg border border-border">
+                    {currentLogos.light ? <img src={currentLogos.light} className="h-14 object-contain" /> : <span className="text-xs text-muted-foreground">No logo set</span>}
+                  </div>
+                  <Input type="file" accept="image/*" onChange={e => setLogoLight(e.target.files?.[0] || null)} />
+                </div>
+                <div className="space-y-2 p-3 rounded-xl border border-border bg-secondary/30">
+                  <Label className="text-sm">Dark theme logo</Label>
+                  <div className="h-20 flex items-center justify-center bg-zinc-900 rounded-lg border border-border">
+                    {currentLogos.dark ? <img src={currentLogos.dark} className="h-14 object-contain" /> : <span className="text-xs text-zinc-500">No logo set</span>}
+                  </div>
+                  <Input type="file" accept="image/*" onChange={e => setLogoDark(e.target.files?.[0] || null)} />
+                </div>
+              </div>
+              <Button onClick={handleSaveLogos} disabled={logoSaving} className="gradient-primary text-primary-foreground gap-2">
+                {logoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                Save Logos
+              </Button>
             </div>
           </TabsContent>
         </Tabs>

@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target, Phone } from "lucide-react";
-import edspireLogo from "@/assets/edspire-logo.png";
+import { useAppLogo } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
-import Avatar3D from "@/components/Avatar3D";
+import { MascotAvatar } from "@/components/MascotAvatar";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Other"];
 const CLASSES = ["7", "8", "9", "10", "11", "12"];
@@ -24,6 +24,7 @@ interface SavedAvatarData {
 }
 
 const Profile = () => {
+  const logo = useAppLogo();
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState("");
   const [studentClass, setStudentClass] = useState("");
@@ -144,7 +145,7 @@ const Profile = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-9 w-9">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <img src={edspireLogo} alt="Edspire Lens" className="h-8 w-8 object-contain" />
+            <img src={logo} alt="Edspire Lens" className="h-8 w-8 object-contain" />
             <h1 className="font-display text-lg font-bold text-foreground">
               Edspire <span className="text-gradient">Lens</span> — Profile
             </h1>
@@ -188,14 +189,13 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* 3D Avatar with clothing picker */}
-        <Avatar3D
-          xp={xp}
-          selectedOutfit={outfit}
-          onOutfitChange={setOutfit}
-          ownedItems={ownedItems}
-          onPurchase={handlePurchase}
-        />
+        {/* Friendly mascot */}
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-card flex flex-col items-center gap-3">
+          <MascotAvatar size={140} level={level} />
+          <p className="text-xs text-muted-foreground text-center">
+            Your study buddy levels up as you earn XP. Reach higher levels to unlock new color tiers!
+          </p>
+        </div>
 
         {/* Edit Info */}
         <div className="bg-card border border-border rounded-2xl p-6 shadow-card">

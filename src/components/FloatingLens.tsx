@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award } from "lucide-react";
+import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SummaryPanel from "./SummaryPanel";
 import NotesPanel from "./NotesPanel";
@@ -9,6 +9,7 @@ import FlashcardPanel from "./FlashcardPanel";
 import ChatPanel from "./ChatPanel";
 import InfographicPanel from "./InfographicPanel";
 import PYQPanel from "./PYQPanel";
+import TeacherNotesPanel from "./TeacherNotesPanel";
 import { TranscriptSegment, QuizQuestion, Flashcard } from "@/lib/mockData";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -24,9 +25,10 @@ interface FloatingLensProps {
   flashcardsLoading?: boolean;
   videoTitle: string;
   onQuizComplete?: (score: number, total: number) => void;
+  analysisId?: string;
 }
 
-const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizLoading, flashcards, flashcardsLoading, videoTitle, onQuizComplete }: FloatingLensProps) => {
+const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizLoading, flashcards, flashcardsLoading, videoTitle, onQuizComplete, analysisId }: FloatingLensProps) => {
   const [minimized, setMinimized] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -111,12 +113,15 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                     <MessageCircle className="h-3.5 w-3.5" /> Chat
                   </TabsTrigger>
                 </TabsList>
-                <TabsList className="w-full grid grid-cols-2 mb-4 bg-secondary/50 rounded-lg h-10">
+                <TabsList className="w-full grid grid-cols-3 mb-4 bg-secondary/50 rounded-lg h-10">
                   <TabsTrigger value="infographic" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
                     <ImageIcon className="h-3.5 w-3.5" /> Infographic
                   </TabsTrigger>
                   <TabsTrigger value="pyq" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
                     <Award className="h-3.5 w-3.5" /> PYQs
+                  </TabsTrigger>
+                  <TabsTrigger value="board" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <ClipboardList className="h-3.5 w-3.5" /> Board
                   </TabsTrigger>
                 </TabsList>
 
@@ -130,7 +135,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                       <p className="text-xs text-muted-foreground">Extracting questions...</p>
                     </div>
                   ) : quiz.length > 0 ? (
-                    <QuizPanel questions={quiz} onComplete={onQuizComplete} />
+                    <QuizPanel questions={quiz} onComplete={onQuizComplete} videoTitle={videoTitle} analysisId={analysisId} />
                   ) : (
                     <p className="text-xs text-muted-foreground text-center py-8">No quiz available yet.</p>
                   )}
@@ -139,6 +144,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                 <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} /></TabsContent>
                 <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
                 <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
+                <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
               </Tabs>
             </div>
           )}
@@ -189,7 +195,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                   <BrainCircuit className="h-3 w-3" /> Quiz
                 </TabsTrigger>
               </TabsList>
-              <TabsList className="w-full grid grid-cols-4 mb-4 bg-secondary/50 rounded-lg h-9">
+              <TabsList className="w-full grid grid-cols-5 mb-4 bg-secondary/50 rounded-lg h-9">
                 <TabsTrigger value="flashcards" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
                   <Layers className="h-3 w-3" /> Cards
                 </TabsTrigger>
@@ -201,6 +207,9 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                 </TabsTrigger>
                 <TabsTrigger value="pyq" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
                   <Award className="h-3 w-3" /> PYQ
+                </TabsTrigger>
+                <TabsTrigger value="board" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
+                  <ClipboardList className="h-3 w-3" /> Board
                 </TabsTrigger>
               </TabsList>
 
@@ -214,7 +223,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                     <p className="text-xs text-muted-foreground">Extracting all questions from video...</p>
                   </div>
                 ) : quiz.length > 0 ? (
-                  <QuizPanel questions={quiz} onComplete={onQuizComplete} />
+                  <QuizPanel questions={quiz} onComplete={onQuizComplete} videoTitle={videoTitle} analysisId={analysisId} />
                 ) : (
                   <p className="text-xs text-muted-foreground text-center py-8">No quiz available yet.</p>
                 )}
@@ -223,6 +232,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
               <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} /></TabsContent>
               <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
               <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
+              <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
             </Tabs>
           </div>
         )}
