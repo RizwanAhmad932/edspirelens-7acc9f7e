@@ -2,13 +2,16 @@ import { useState } from "react";
 import { CheckCircle, XCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuizQuestion } from "@/lib/mockData";
+import { recordQuizAttempt } from "@/lib/mockData";
 
 interface QuizPanelProps {
   questions: QuizQuestion[];
   onComplete?: (score: number, total: number) => void;
+  videoTitle?: string;
+  analysisId?: string;
 }
 
-const QuizPanel = ({ questions, onComplete }: QuizPanelProps) => {
+const QuizPanel = ({ questions, onComplete, videoTitle, analysisId }: QuizPanelProps) => {
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
@@ -21,8 +24,19 @@ const QuizPanel = ({ questions, onComplete }: QuizPanelProps) => {
     if (answered) return;
     setSelected(idx);
     setAnswered(true);
-    if (idx === question.correctIndex) {
-      setScore((s) => s + 1);
+    const isCorrect = idx === question.correctIndex;
+    if (isCorrect) setScore((s) => s + 1);
+    // Record attempt for analytics (fire-and-forget)
+    if (videoTitle) {
+      recordQuizAttempt({
+        analysisId,
+        videoTitle,
+        topic: videoTitle,
+        question: question.question,
+        selectedAnswer: question.options[idx] ?? "",
+        correctAnswer: question.options[question.correctIndex] ?? "",
+        isCorrect,
+      }).catch(() => {});
     }
   };
 
