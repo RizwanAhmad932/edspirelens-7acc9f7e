@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft, GraduationCap, Phone, Target, BookOpen, Eye, EyeOff, CheckCircle2 } from "lucide-react";
-import edspireLogo from "@/assets/edspire-logo.png";
 import { lovable } from "@/integrations/lovable/index";
+import { useAppLogo } from "@/hooks/use-app-logo";
 
 type AuthView = "login" | "signup" | "forgot";
 
