@@ -91,6 +91,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          id: string
+          logo_dark_url: string | null
+          logo_light_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          logo_dark_url?: string | null
+          logo_light_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_shortcuts: {
         Row: {
           app_url: string
@@ -265,6 +286,45 @@ export type Database = {
           unlocked_avatars?: Json | null
           updated_at?: string
           xp?: number | null
+        }
+        Relationships: []
+      }
+      quiz_attempts: {
+        Row: {
+          analysis_id: string | null
+          correct_answer: string | null
+          created_at: string
+          id: string
+          is_correct: boolean
+          question: string
+          selected_answer: string | null
+          topic: string | null
+          user_id: string
+          video_title: string | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          correct_answer?: string | null
+          created_at?: string
+          id?: string
+          is_correct: boolean
+          question: string
+          selected_answer?: string | null
+          topic?: string | null
+          user_id: string
+          video_title?: string | null
+        }
+        Update: {
+          analysis_id?: string | null
+          correct_answer?: string | null
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          question?: string
+          selected_answer?: string | null
+          topic?: string | null
+          user_id?: string
+          video_title?: string | null
         }
         Relationships: []
       }
