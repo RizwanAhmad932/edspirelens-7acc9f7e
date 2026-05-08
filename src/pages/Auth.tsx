@@ -32,6 +32,7 @@ const FloatingShape = ({ className, style }: { className: string; style: React.C
 );
 
 const Auth = () => {
+  const edspireLogo = useAppLogo();
   const [view, setView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
