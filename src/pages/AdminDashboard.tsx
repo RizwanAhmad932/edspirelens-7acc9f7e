@@ -751,6 +751,40 @@ const AdminDashboard = () => {
               </div>
             </div>
           </TabsContent>
+
+          {/* Branding / Logo Tab */}
+          <TabsContent value="branding">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-card space-y-5">
+              <div>
+                <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                  <ImagePlus className="h-5 w-5 text-accent" /> App Logo
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload separate logos for light and dark themes. PNG with transparent background recommended.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 p-3 rounded-xl border border-border bg-secondary/30">
+                  <Label className="text-sm">Light theme logo</Label>
+                  <div className="h-20 flex items-center justify-center bg-white rounded-lg border border-border">
+                    {currentLogos.light ? <img src={currentLogos.light} className="h-14 object-contain" /> : <span className="text-xs text-muted-foreground">No logo set</span>}
+                  </div>
+                  <Input type="file" accept="image/*" onChange={e => setLogoLight(e.target.files?.[0] || null)} />
+                </div>
+                <div className="space-y-2 p-3 rounded-xl border border-border bg-secondary/30">
+                  <Label className="text-sm">Dark theme logo</Label>
+                  <div className="h-20 flex items-center justify-center bg-zinc-900 rounded-lg border border-border">
+                    {currentLogos.dark ? <img src={currentLogos.dark} className="h-14 object-contain" /> : <span className="text-xs text-zinc-500">No logo set</span>}
+                  </div>
+                  <Input type="file" accept="image/*" onChange={e => setLogoDark(e.target.files?.[0] || null)} />
+                </div>
+              </div>
+              <Button onClick={handleSaveLogos} disabled={logoSaving} className="gradient-primary text-primary-foreground gap-2">
+                {logoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                Save Logos
+              </Button>
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
     </div>
