@@ -506,10 +506,6 @@ ${transcriptText.substring(0, 10000)}`,
       return new Response(JSON.stringify(fc), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (action === "chat") {
-      // handled below
-    }
-
     if (action === "teacher-notes") {
       const { chapterTitle, transcript: transcriptText } = body;
       if (!transcriptText) return new Response(JSON.stringify({ error: "transcript required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -561,7 +557,7 @@ ${transcriptText.substring(0, 10000)}`,
       return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (action === "chat-handler-placeholder-never-true-x") {
+    if (action === "chat") {
       const { messages, videoTitle: title, transcript: transcriptText } = body;
 
       const chatResponse = await aiCall(LOVABLE_API_KEY, [
