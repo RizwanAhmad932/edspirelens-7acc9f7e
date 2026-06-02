@@ -582,9 +582,111 @@ ${transcriptText || "No transcript available."}`,
       return new Response(JSON.stringify({ reply }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (action === "generate-short-notes") {
+      const { chapterTitle, transcript: transcriptText } = body;
+      if (!transcriptText) return new Response(JSON.stringify({ error: "transcript required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // unreachable
+      const snResp = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: "You write ultra-concise exam revision cheat sheets. Output crisp 1-line bullets that a student can revise in under 5 minutes. Highlight formulas, key terms, and must-remember facts." },
+          { role: "user", content: `Create SHORT NOTES cheat-sheet for "${chapterTitle}".\n\nTranscript:\n${transcriptText.substring(0, 15000)}` }
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_short_notes",
+            description: "Return short notes cheat sheet",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                keyPoints: { type: "array", items: { type: "string" } },
+                formulas: { type: "array", items: { type: "string" } },
+                keyTerms: { type: "array", items: { type: "object", properties: { term: { type: "string" }, definition: { type: "string" } }, required: ["term", "definition"], additionalProperties: false } },
+                rememberTip: { type: "string" },
+              },
+              required: ["title", "keyPoints", "formulas", "keyTerms", "rememberTip"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_short_notes" } }
+      );
+
+      if (!snResp.ok) {
+        const errResp = handleAIError(snResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${snResp.status}`);
+      }
+      const result = parseToolResponse(await snResp.json());
+      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "generate-diagram-quiz") {
+      const { chapterTitle, transcript: transcriptText, exam } = body;
+      if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const examLabel = exam || "NEET/Board";
+      const imgPrompt = `Create a clean, labeled scientific/educational diagram for the chapter "${chapterTitle}" in the style of ${examLabel} exam textbooks.\n- White background, crisp lines, scientifically accurate\n- Label 5 key parts with letters A, B, C, D, E in small circles connected by thin lines\n- Single clear textbook-style diagram, no decoration\n\nChapter context: ${(transcriptText || "").substring(0, 1500)}`;
+
+      const imgResp = await aiImageCall(LOVABLE_API_KEY, imgPrompt);
+      if (!imgResp.ok) {
+        const errResp = handleAIError(imgResp);
+        if (errResp) return errResp;
+        throw new Error(`Image AI error: ${imgResp.status}`);
+      }
+      const imgData = await imgResp.json();
+      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!imageUrl) throw new Error("No diagram image returned");
+
+      const qResp = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You write diagram-based labeling MCQs in the style of ${examLabel} exams.` },
+          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E in the format: "What is the part labeled X in the diagram?" with 4 plausible options.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_diagram_quiz",
+            description: "Return 5 diagram labeling MCQs",
+            parameters: {
+              type: "object",
+              properties: {
+                questions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: { type: "string" },
+                      question: { type: "string" },
+                      options: { type: "array", items: { type: "string" } },
+                      correctIndex: { type: "number" },
+                    },
+                    required: ["label", "question", "options", "correctIndex"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["questions"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_diagram_quiz" } }
+      );
+
+      if (!qResp.ok) {
+        const errResp = handleAIError(qResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${qResp.status}`);
+      }
+      const quiz = parseToolResponse(await qResp.json());
+      return new Response(JSON.stringify({ imageUrl, ...quiz }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("Edge function error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
