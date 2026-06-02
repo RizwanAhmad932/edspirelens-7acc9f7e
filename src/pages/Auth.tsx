@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft, GraduationCap, Phone, Target, BookOpen, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft, GraduationCap, Phone, Target, BookOpen, Eye, EyeOff, CheckCircle2, KeyRound } from "lucide-react";
 import { lovable } from "@/integrations/lovable/index";
 import { useAppLogo } from "@/hooks/use-app-logo";
 
-type AuthView = "login" | "signup" | "forgot";
+type AuthView = "login" | "signup" | "forgot" | "forgot-verify";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Other"];
 const CLASSES = ["7", "8", "9", "10", "11", "12"];
@@ -43,6 +43,8 @@ const Auth = () => {
   const [targetExam, setTargetExam] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const navigate = useNavigate();
 
   const pwStrength = useMemo(() => getPasswordStrength(password), [password]);
@@ -62,12 +64,25 @@ const Auth = () => {
     setLoading(true);
     try {
       if (view === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+        // Send a 6-digit OTP via email (Lovable auth email)
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: false },
         });
         if (error) throw error;
-        toast.success("Check your email for a password reset link!");
-        setView("login");
+        toast.success("Verification code sent! Check your email.");
+        setView("forgot-verify");
+      } else if (view === "forgot-verify") {
+        if (!otp || otp.length < 6) { toast.error("Enter the 6-digit code"); setLoading(false); return; }
+        if (!newPassword || newPassword.length < 6) { toast.error("New password must be ≥ 6 characters"); setLoading(false); return; }
+        // Verify the OTP — this signs the user in
+        const { error: vErr } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
+        if (vErr) throw vErr;
+        // Now update the password
+        const { error: uErr } = await supabase.auth.updateUser({ password: newPassword });
+        if (uErr) throw uErr;
+        toast.success("Password updated! You're signed in.");
+        navigate("/");
       } else if (view === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
