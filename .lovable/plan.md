@@ -1,111 +1,59 @@
+# Plan: Major Feature Enhancements & Bug Fixes
 
+## 1. Fix XP Not Increasing
+**Problem**: `add_xp` RPC exists but may not be called consistently after quiz attempts.
+**Fix**: Audit `QuizPanel.tsx` — ensure `supabase.rpc('add_xp', { _user_id, _amount })` is invoked after each correct answer and quiz completion. Add toast feedback. Refresh profile XP in real-time.
 
-# Upgrade Plan: Advanced 3D Avatar, UI Overhaul, Performance & Ad Accuracy
+## 2. Fix Profile Not Saving
+**Problem**: Profile updates silently fail (likely missing `.select()` or RLS edge case).
+**Fix**: In `Profile.tsx`, ensure update uses `auth.uid()` as `id`, awaits properly, surfaces errors. Add explicit upsert fallback.
 
-## Overview
-Five major improvements: realistic 3D human avatar, modern login/dashboard UI, enhanced theme system, accurate ad tracking, and faster app performance.
+## 3. Forgot Password with Email OTP
+**Flow**:
+- "Forgot password?" link on `/auth` → opens dialog with email input
+- Use `supabase.auth.signInWithOtp({ email })` to send 6-digit code
+- User enters code + new password → verify OTP via `verifyOtp({ type: 'email', token, email })` → then `updateUser({ password })`
+- Uses existing Lovable auth email infrastructure (no new templates needed)
 
----
+## 4. App Tutorial for New Users
+- New `TutorialOverlay.tsx` — 5-step guided tour using floating cards pointing to: VideoInput, FloatingLens, AppDrawer, Profile, Analytics
+- Triggered on first login (localStorage flag `lens_tutorial_done`)
+- "Skip" button + "Next/Prev" navigation
+- Replay option in Profile settings
 
-## 1. Realistic 3D Human Avatar
+## 5. Diagram-Based MCQ Section
+**New panel**: `DiagramQuizPanel.tsx` in FloatingLens
+- Edge function action `generate-diagram-quiz`: Gemini Vision extracts diagrams from video frames (uses video thumbnails + key timestamps) → generates labeling MCQs (e.g., "What is part A?")
+- Returns: `{ imageUrl, question, labels: [{id, x, y}], options, correct }`
+- UI: Renders image with labeled points (A, B, C) over diagram, MCQ below
+- Tagged for NEET/Board/JEE exam styles
 
-**Current state**: 886-line Three.js primitive-based character (spheres/boxes for body parts).
+## 6. Short Notes Section
+**New tab in FloatingLens**: "Quick Notes"
+- New edge function action `generate-short-notes`: Gemini generates 1-page bullet-point cheat sheet from transcript (≤15 bullets, formula highlights, key terms bold)
+- Component: `ShortNotesPanel.tsx` with copy/download buttons
 
-**Plan**: Replace with a GLB/GLTF model approach using `useGLTF` from drei, or significantly improve the current primitive system with:
-- Proper human proportions using `LatheGeometry` and `ExtrudeGeometry` for smooth curved body parts
-- Realistic face with proper eye sockets, eyebrows, eyelids with blink animation, nose bridge, lips with expressions
-- Smooth skin shader using `MeshPhysicalMaterial` with subsurface scattering approximation
-- Hair system using multiple curved planes with transparency
-- Proper hand/finger geometry (5 fingers per hand)
-- Walking idle animation with weight shifting, arm swing, head tracking
-- Outfit system applies material colors to the improved geometry
+## 7. Enhanced Infographics
+- Upgrade `generate-infographic` to use `google/gemini-3-pro-image-preview` with structured prompt: title + 4-6 visual concept cards + chapter name + brand styling
+- Add "Regenerate with different style" button (academic/colorful/minimal)
 
-**Files**: `src/components/Avatar3D.tsx`
+## 8. Better Video AI (YouTube + Gemini)
+- Enhance `analyze-video` to extract YouTube video metadata (chapters, description, captions) via oEmbed + youtube transcript
+- Pass full metadata + transcript to Gemini for richer context
+- Cross-reference timestamps with chapter markers for accuracy
 
----
+## Database Changes
+```sql
+-- New table for diagram quiz attempts (analytics)
+CREATE TABLE public.diagram_attempts (
+  id uuid PK, user_id uuid, analysis_id uuid,
+  question text, selected text, correct text,
+  is_correct boolean, image_url text, created_at timestamptz
+);
+-- + GRANTs + RLS (own-data)
+```
 
-## 2. Advanced Login Page UI
-
-**Current state**: Simple card with form fields on gradient background.
-
-**Plan**:
-- Add animated background with floating geometric shapes (CSS-only, no Three.js)
-- Glassmorphism card with backdrop blur and subtle border glow
-- Animated logo with pulse/glow effect on load
-- Smooth field focus animations with accent color transitions
-- Staggered entry animations for form fields
-- Password strength indicator on signup
-- Animated success/error states
-
-**Files**: `src/pages/Auth.tsx`, `src/index.css`
-
----
-
-## 3. Advanced Dashboard UI
-
-**Current state**: Basic tabs with tables and forms.
-
-**Plan**:
-- Stat cards with gradient backgrounds, animated counters, and trend indicators
-- Better data visualization for ad metrics (progress bars for CTR)
-- Improved table styling with hover effects and status badges
-- Smoother tab transitions with fade/slide animations
-- Quick action buttons with tooltips
-- Better mobile layout for admin tables (card view on small screens)
-
-**Files**: `src/pages/Index.tsx`, `src/pages/AdminDashboard.tsx`
-
----
-
-## 4. Enhanced Theme System
-
-**Current state**: 6 themes with CSS animations, polled every 30s.
-
-**Plan**:
-- Add more themes: Independence Day (15 Aug), Navratri, Ganesh Chaturthi, New Year
-- Add theme scheduling in admin (start/end dates for auto-activation)
-- Add theme intensity control (low/medium/high particle count)
-- Reduce poll interval to realtime subscription for instant theme changes
-- Optimize particle rendering with `will-change` and `transform` GPU hints
-
-**Files**: `src/components/FestivalOverlay.tsx`, `src/pages/AdminDashboard.tsx`
-
----
-
-## 5. Accurate Ad View/Click Tracking
-
-**Current state**: Counts all `ad_events` rows client-side; no deduplication; hits 1000-row query limit.
-
-**Plan**:
-- Create a database function `get_ad_stats` that runs `SELECT ad_id, event_type, COUNT(*)` server-side, bypassing the 1000-row limit
-- Add `IntersectionObserver` to AdBanner so views only count when actually visible on screen
-- Deduplicate views per user per session (track in-memory Set)
-- Show CTR percentage in admin panel
-
-**Files**: `src/components/AdBanner.tsx`, `src/pages/AdminDashboard.tsx`, new migration for `get_ad_stats` RPC
-
----
-
-## 6. Performance Optimization
-
-**Current state**: Multiple concurrent queries on load, heavy Three.js on profile.
-
-**Plan**:
-- Lazy load `FestivalOverlay` and `FloatingLens` with `React.lazy`
-- Add `loading="lazy"` to all ad images (already partially done)
-- Memoize history list and ad components with `React.memo`
-- Reduce re-renders in Index.tsx by splitting state into smaller hooks
-- Use `Suspense` boundaries with skeleton fallbacks
-- Defer non-critical queries (ads, theme) with `setTimeout`
-
-**Files**: `src/pages/Index.tsx`, `src/components/AdBanner.tsx`, `src/components/FestivalOverlay.tsx`
-
----
-
-## Technical Details
-
-- **New migration**: `get_ad_stats` RPC function for accurate ad metrics
-- **No new dependencies** needed (Three.js, drei already installed)
-- **CSS animations** preferred over JS for login page effects (GPU-accelerated)
-- **All changes** maintain mobile-first responsive design
-
+## Files
+- **New**: `TutorialOverlay.tsx`, `DiagramQuizPanel.tsx`, `ShortNotesPanel.tsx`, `ForgotPasswordDialog.tsx`
+- **Edit**: `Auth.tsx`, `Profile.tsx`, `QuizPanel.tsx`, `FloatingLens.tsx`, `Index.tsx`, `InfographicPanel.tsx`, `supabase/functions/analyze-video/index.ts`
+- **Migration**: `diagram_attempts` table
