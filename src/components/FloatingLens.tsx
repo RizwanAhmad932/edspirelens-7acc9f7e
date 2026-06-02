@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList } from "lucide-react";
+import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList, Zap, ImagePlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SummaryPanel from "./SummaryPanel";
 import NotesPanel from "./NotesPanel";
@@ -10,6 +10,8 @@ import ChatPanel from "./ChatPanel";
 import InfographicPanel from "./InfographicPanel";
 import PYQPanel from "./PYQPanel";
 import TeacherNotesPanel from "./TeacherNotesPanel";
+import ShortNotesPanel from "./ShortNotesPanel";
+import DiagramQuizPanel from "./DiagramQuizPanel";
 import { TranscriptSegment, QuizQuestion, Flashcard } from "@/lib/mockData";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -113,7 +115,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                     <MessageCircle className="h-3.5 w-3.5" /> Chat
                   </TabsTrigger>
                 </TabsList>
-                <TabsList className="w-full grid grid-cols-3 mb-4 bg-secondary/50 rounded-lg h-10">
+                <TabsList className="w-full grid grid-cols-3 mb-2 bg-secondary/50 rounded-lg h-10">
                   <TabsTrigger value="infographic" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
                     <ImageIcon className="h-3.5 w-3.5" /> Infographic
                   </TabsTrigger>
@@ -122,6 +124,14 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                   </TabsTrigger>
                   <TabsTrigger value="board" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
                     <ClipboardList className="h-3.5 w-3.5" /> Board
+                  </TabsTrigger>
+                </TabsList>
+                <TabsList className="w-full grid grid-cols-2 mb-4 bg-secondary/50 rounded-lg h-10">
+                  <TabsTrigger value="shortnotes" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <Zap className="h-3.5 w-3.5" /> Quick Notes
+                  </TabsTrigger>
+                  <TabsTrigger value="diagram" className="text-xs gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <ImagePlus className="h-3.5 w-3.5" /> Diagram MCQ
                   </TabsTrigger>
                 </TabsList>
 
@@ -145,6 +155,8 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                 <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
                 <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
                 <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
+                <TabsContent value="shortnotes"><ShortNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
+                <TabsContent value="diagram"><DiagramQuizPanel chapterTitle={videoTitle} transcript={transcript} analysisId={analysisId} /></TabsContent>
               </Tabs>
             </div>
           )}
@@ -195,7 +207,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                   <BrainCircuit className="h-3 w-3" /> Quiz
                 </TabsTrigger>
               </TabsList>
-              <TabsList className="w-full grid grid-cols-5 mb-4 bg-secondary/50 rounded-lg h-9">
+              <TabsList className="w-full grid grid-cols-5 mb-2 bg-secondary/50 rounded-lg h-9">
                 <TabsTrigger value="flashcards" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
                   <Layers className="h-3 w-3" /> Cards
                 </TabsTrigger>
@@ -210,6 +222,14 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                 </TabsTrigger>
                 <TabsTrigger value="board" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
                   <ClipboardList className="h-3 w-3" /> Board
+                </TabsTrigger>
+              </TabsList>
+              <TabsList className="w-full grid grid-cols-2 mb-4 bg-secondary/50 rounded-lg h-9">
+                <TabsTrigger value="shortnotes" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
+                  <Zap className="h-3 w-3" /> Quick Notes
+                </TabsTrigger>
+                <TabsTrigger value="diagram" className="text-[10px] gap-1 rounded-md data-[state=active]:bg-card data-[state=active]:shadow-sm px-1">
+                  <ImagePlus className="h-3 w-3" /> Diagram MCQ
                 </TabsTrigger>
               </TabsList>
 
@@ -233,6 +253,8 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
               <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
               <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
               <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
+              <TabsContent value="shortnotes"><ShortNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
+              <TabsContent value="diagram"><DiagramQuizPanel chapterTitle={videoTitle} transcript={transcript} analysisId={analysisId} /></TabsContent>
             </Tabs>
           </div>
         )}

@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target, Phone } from "lucide-react";
+import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target, Phone, PlayCircle } from "lucide-react";
 import { useAppLogo } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { MascotAvatar } from "@/components/MascotAvatar";
+import { resetTutorial } from "@/components/TutorialOverlay";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Other"];
 const CLASSES = ["7", "8", "9", "10", "11", "12"];
@@ -107,19 +108,30 @@ const Profile = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Not signed in"); setSaving(false); return; }
       const avatarData: SavedAvatarData = { ...outfit, owned: ownedItems };
-      const { error } = await supabase.from("profiles").update({
+      const { error, data } = await supabase.from("profiles").update({
         full_name: fullName,
         selected_avatar: JSON.stringify(avatarData),
         student_class: studentClass,
         board: board,
         target_exam: targetExam || null,
         phone: phone || null,
-      }).eq("id", profile.id);
+      }).eq("id", user.id).select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        // Fallback: row missing, insert it
+        const { error: insErr } = await supabase.from("profiles").insert({
+          id: user.id, full_name: fullName, selected_avatar: JSON.stringify(avatarData),
+          student_class: studentClass, board, target_exam: targetExam || null, phone: phone || null,
+        });
+        if (insErr) throw insErr;
+      }
       toast.success("Profile updated!");
     } catch (e: any) {
-      toast.error(e.message || "Failed to save");
+      console.error("Profile save error:", e);
+      toast.error(e.message || "Failed to save profile");
     } finally {
       setSaving(false);
     }
@@ -279,6 +291,15 @@ const Profile = () => {
         {/* Save Button */}
         <Button onClick={handleSave} disabled={saving} className="w-full h-12 rounded-xl gradient-primary text-primary-foreground font-semibold text-base">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save Profile"}
+        </Button>
+
+        {/* Replay tutorial */}
+        <Button
+          variant="outline"
+          onClick={() => { resetTutorial(); toast.success("Tutorial will play next time you open the home page."); navigate("/"); }}
+          className="w-full h-11 rounded-xl gap-2"
+        >
+          <PlayCircle className="h-4 w-4" /> Replay app tutorial
         </Button>
       </main>
     </div>

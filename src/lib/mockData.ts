@@ -47,6 +47,55 @@ export interface TeacherNoteBlock {
   diagram?: string;
 }
 
+export interface ShortNotes {
+  title: string;
+  keyPoints: string[];
+  formulas: string[];
+  keyTerms: { term: string; definition: string }[];
+  rememberTip: string;
+}
+
+export interface DiagramQuizQuestion {
+  label: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
+
+export interface DiagramQuiz {
+  imageUrl: string;
+  questions: DiagramQuizQuestion[];
+}
+
+export async function generateShortNotes(chapterTitle: string, transcript: TranscriptSegment[]): Promise<ShortNotes> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: {
+      videoUrl: "",
+      action: "generate-short-notes",
+      chapterTitle,
+      transcript: transcript.map((s) => s.text).join(" "),
+    },
+  });
+  if (error) throw new Error(error.message || "Failed to generate short notes");
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function generateDiagramQuiz(chapterTitle: string, transcript: TranscriptSegment[], exam: string): Promise<DiagramQuiz> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: {
+      videoUrl: "",
+      action: "generate-diagram-quiz",
+      chapterTitle,
+      transcript: transcript.map((s) => s.text).join(" "),
+      exam,
+    },
+  });
+  if (error) throw new Error(error.message || "Failed to generate diagram quiz");
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: { videoUrl, action: "analyze" },

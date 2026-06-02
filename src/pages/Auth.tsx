@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft, GraduationCap, Phone, Target, BookOpen, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, Lock, User, Sparkles, ArrowLeft, GraduationCap, Phone, Target, BookOpen, Eye, EyeOff, CheckCircle2, KeyRound } from "lucide-react";
 import { lovable } from "@/integrations/lovable/index";
 import { useAppLogo } from "@/hooks/use-app-logo";
 
-type AuthView = "login" | "signup" | "forgot";
+type AuthView = "login" | "signup" | "forgot" | "forgot-verify";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Other"];
 const CLASSES = ["7", "8", "9", "10", "11", "12"];
@@ -43,6 +43,8 @@ const Auth = () => {
   const [targetExam, setTargetExam] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const navigate = useNavigate();
 
   const pwStrength = useMemo(() => getPasswordStrength(password), [password]);
@@ -62,12 +64,25 @@ const Auth = () => {
     setLoading(true);
     try {
       if (view === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+        // Send a 6-digit OTP via email (Lovable auth email)
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: false },
         });
         if (error) throw error;
-        toast.success("Check your email for a password reset link!");
-        setView("login");
+        toast.success("Verification code sent! Check your email.");
+        setView("forgot-verify");
+      } else if (view === "forgot-verify") {
+        if (!otp || otp.length < 6) { toast.error("Enter the 6-digit code"); setLoading(false); return; }
+        if (!newPassword || newPassword.length < 6) { toast.error("New password must be ≥ 6 characters"); setLoading(false); return; }
+        // Verify the OTP — this signs the user in
+        const { error: vErr } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
+        if (vErr) throw vErr;
+        // Now update the password
+        const { error: uErr } = await supabase.auth.updateUser({ password: newPassword });
+        if (uErr) throw uErr;
+        toast.success("Password updated! You're signed in.");
+        navigate("/");
       } else if (view === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -130,11 +145,11 @@ const Auth = () => {
           <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-accent/30 via-transparent to-primary/20 blur-sm" />
           <div className="relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-elevated p-5 sm:p-8 animate-scale-in" style={{ animationDelay: "100ms" }}>
             <h2 className="font-display text-xl font-bold text-foreground text-center mb-5">
-              {view === "login" ? "Welcome back" : view === "signup" ? "Create account" : "Reset Password"}
+              {view === "login" ? "Welcome back" : view === "signup" ? "Create account" : view === "forgot" ? "Reset Password" : "Verify & Set New Password"}
             </h2>
 
-            {view === "forgot" && (
-              <button onClick={() => setView("login")} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors mb-4">
+            {(view === "forgot" || view === "forgot-verify") && (
+              <button type="button" onClick={() => setView(view === "forgot-verify" ? "forgot" : "login")} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors mb-4">
                 <ArrowLeft className="h-3 w-3" /> Back to sign in
               </button>
             )}
@@ -203,7 +218,7 @@ const Auth = () => {
                 </div>
               </div>
 
-              {view !== "forgot" && (
+              {view !== "forgot" && view !== "forgot-verify" && (
                 <div className="space-y-1.5 animate-fade-in" style={fieldDelay(view === "signup" ? 4 : 1)}>
                   <Label htmlFor="password" className="text-sm font-medium">Password *</Label>
                   <div className="relative group">
@@ -232,12 +247,35 @@ const Auth = () => {
                 </div>
               )}
 
+              {view === "forgot-verify" && (
+                <>
+                  <div className="space-y-1.5 animate-fade-in">
+                    <Label htmlFor="otp" className="text-sm font-medium">6-digit code *</Label>
+                    <div className="relative group">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
+                      <Input id="otp" inputMode="numeric" pattern="[0-9]*" maxLength={6} placeholder="123456" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} className="pl-10 h-10 rounded-xl tracking-[0.4em] text-center font-mono" required />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Check your inbox (and spam) for the code we sent to {email}.</p>
+                  </div>
+                  <div className="space-y-1.5 animate-fade-in">
+                    <Label htmlFor="newpw" className="text-sm font-medium">New Password *</Label>
+                    <div className="relative group">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
+                      <Input id="newpw" type={showPassword ? "text" : "password"} placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="pl-10 pr-10 h-10 rounded-xl" required minLength={6} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Button type="submit" disabled={loading} className="w-full h-11 rounded-xl gradient-primary text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all animate-fade-in" style={fieldDelay(view === "signup" ? 5 : 2)}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : view === "login" ? "Sign in" : view === "signup" ? "Create account" : "Send Reset Link"}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : view === "login" ? "Sign in" : view === "signup" ? "Create account" : view === "forgot" ? "Send 6-digit code" : "Verify & update password"}
               </Button>
             </form>
 
-            {view !== "forgot" && (
+            {view !== "forgot" && view !== "forgot-verify" && (
               <div className="mt-4 animate-fade-in" style={fieldDelay(view === "signup" ? 6 : 3)}>
                 <div className="relative flex items-center justify-center my-4">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>

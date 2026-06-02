@@ -26,6 +26,8 @@ import {
 const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
 const FloatingLens = lazy(() => import("@/components/FloatingLens"));
 const AppDrawer = lazy(() => import("@/components/AppDrawer"));
+const TutorialOverlay = lazy(() => import("@/components/TutorialOverlay"));
+import { shouldShowTutorial } from "@/components/TutorialOverlay";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +42,7 @@ const Index = () => {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const navigate = useNavigate();
   const logo = useAppLogo();
 
@@ -72,6 +75,8 @@ const Index = () => {
         return;
       }
       setUser(session.user);
+      // Show tutorial for new users (once)
+      if (shouldShowTutorial()) setTimeout(() => setTutorialOpen(true), 600);
     });
 
     return () => subscription.unsubscribe();
@@ -272,6 +277,11 @@ const Index = () => {
       )}
 
       <Suspense fallback={null}><AppDrawer /></Suspense>
+      {tutorialOpen && (
+        <Suspense fallback={null}>
+          <TutorialOverlay onClose={() => setTutorialOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 };
