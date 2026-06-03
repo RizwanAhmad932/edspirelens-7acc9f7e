@@ -189,15 +189,22 @@ Deno.serve(async (req) => {
 
     // Get user from auth header
     const authHeader = req.headers.get("authorization");
-    let userId: string | null = null;
-    if (authHeader) {
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      const userClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      const { data: { user } } = await userClient.auth.getUser();
-      userId = user?.id || null;
     }
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: authUser } } = await userClient.auth.getUser();
+    if (!authUser) {
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId: string = authUser.id;
 
     if (action === "analyze") {
       const videoId = extractVideoId(videoUrl);
