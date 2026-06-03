@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target, Phone, PlayCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target, Phone, PlayCircle, Link2, Youtube, Instagram, Share2 } from "lucide-react";
 import { useAppLogo } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { MascotAvatar } from "@/components/MascotAvatar";
@@ -301,6 +301,78 @@ const Profile = () => {
         >
           <PlayCircle className="h-4 w-4" /> Replay app tutorial
         </Button>
+
+        {/* How to copy a video link */}
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
+          <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-1 flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-accent" /> How to copy a video link
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Edspire Lens analyzes a public video URL — it never downloads the file. Follow these steps to copy a link from popular apps and paste it into the home page.
+          </p>
+
+          <div className="space-y-4">
+            {/* YouTube */}
+            <div className="rounded-xl border border-border bg-secondary/30 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Youtube className="h-4 w-4 text-red-500" />
+                <h4 className="text-sm font-semibold text-foreground">YouTube (App & Web)</h4>
+              </div>
+              <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
+                <li>Open the video in the YouTube app or on youtube.com.</li>
+                <li>Tap the <span className="font-semibold text-foreground">Share</span> button below the player.</li>
+                <li>Choose <span className="font-semibold text-foreground">Copy link</span>.</li>
+                <li>Come back to Edspire Lens, paste it into the URL field on the home page, and tap <span className="font-semibold text-foreground">Analyze</span>.</li>
+              </ol>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                ✅ Works with full links (<code>youtube.com/watch?v=…</code>) and short links (<code>youtu.be/…</code>).
+              </p>
+            </div>
+
+            {/* Instagram */}
+            <div className="rounded-xl border border-border bg-secondary/30 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Instagram className="h-4 w-4 text-pink-500" />
+                <h4 className="text-sm font-semibold text-foreground">Instagram Reels / Posts</h4>
+              </div>
+              <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
+                <li>Open the Reel or video post in the Instagram app.</li>
+                <li>Tap the <span className="font-semibold text-foreground">Paper-plane / Share</span> icon.</li>
+                <li>Select <span className="font-semibold text-foreground">Copy link</span>.</li>
+                <li>Paste it in Edspire Lens. The post must be public for the link to load.</li>
+              </ol>
+            </div>
+
+            {/* Other platforms */}
+            <div className="rounded-xl border border-border bg-secondary/30 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Share2 className="h-4 w-4 text-accent" />
+                <h4 className="text-sm font-semibold text-foreground">Facebook, X, LinkedIn, TikTok & Others</h4>
+              </div>
+              <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
+                <li>Open the video on the platform's app or website.</li>
+                <li>Tap the <span className="font-semibold text-foreground">Share</span> / three-dot menu.</li>
+                <li>Choose <span className="font-semibold text-foreground">Copy link</span> or <span className="font-semibold text-foreground">Copy URL</span>.</li>
+                <li>If the option isn't shown, share to your browser and copy the address bar URL.</li>
+                <li>Paste into Edspire Lens. Only public links can be analyzed.</li>
+              </ol>
+            </div>
+
+            {/* Desktop tip */}
+            <div className="rounded-xl border border-border bg-secondary/30 p-4">
+              <h4 className="text-sm font-semibold text-foreground mb-1">On a desktop browser</h4>
+              <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
+                <li>Click the address bar at the top of the browser.</li>
+                <li>Press <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[10px]">Ctrl/Cmd + A</kbd> to select, then <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[10px]">Ctrl/Cmd + C</kbd> to copy.</li>
+                <li>Switch to Edspire Lens and paste with <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-[10px]">Ctrl/Cmd + V</kbd>.</li>
+              </ol>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              ⚠️ Please only submit links to lawfully published, public educational content. See the <a href="/about" className="text-accent underline">About & Legal</a> page for full terms.
+            </p>
+          </div>
+        </div>
       </main>
     </div>
   );
