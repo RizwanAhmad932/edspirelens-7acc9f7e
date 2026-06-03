@@ -77,7 +77,7 @@ export async function generateShortNotes(chapterTitle: string, transcript: Trans
     },
   });
   if (error) throw new Error(error.message || "Failed to generate short notes");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data;
 }
 
@@ -92,7 +92,7 @@ export async function generateDiagramQuiz(chapterTitle: string, transcript: Tran
     },
   });
   if (error) throw new Error(error.message || "Failed to generate diagram quiz");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data;
 }
 
@@ -102,7 +102,7 @@ export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
   });
 
   if (error) throw new Error(error.message || "Failed to analyze video");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
 
   return {
     id: data.id || crypto.randomUUID(),
@@ -126,7 +126,7 @@ export async function generateQuiz(transcript: TranscriptSegment[]): Promise<Qui
   });
 
   if (error) throw new Error(error.message || "Failed to generate quiz");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data.questions || [];
 }
 
@@ -140,7 +140,7 @@ export async function generateFlashcards(transcript: TranscriptSegment[]): Promi
   });
 
   if (error) throw new Error(error.message || "Failed to generate flashcards");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data.flashcards || [];
 }
 
@@ -149,7 +149,7 @@ export async function generateInfographic(chapterTitle: string, summary: string[
     body: { videoUrl: "", action: "generate-infographic", chapterTitle, summary },
   });
   if (error) throw new Error(error.message || "Failed to generate infographic");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data.imageUrl;
 }
 
@@ -168,7 +168,7 @@ export async function generatePYQ(
     },
   });
   if (error) throw new Error(error.message || "Failed to generate PYQ");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data;
 }
 
@@ -185,7 +185,7 @@ export async function generateTeacherNotes(
     },
   });
   if (error) throw new Error(error.message || "Failed to extract teacher notes");
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(data.message || data.error);
   return data.blocks || [];
 }
 

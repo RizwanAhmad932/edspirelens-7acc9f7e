@@ -44,7 +44,7 @@ const ChatPanel = ({ videoTitle, transcript }: ChatPanelProps) => {
       });
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.message || data.error);
 
       setMessages(prev => [...prev, { role: "assistant", content: data.reply || "Sorry, I couldn't generate a response." }]);
     } catch (e: any) {
