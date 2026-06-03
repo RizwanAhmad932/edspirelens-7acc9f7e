@@ -143,8 +143,26 @@ function aiImageCall(apiKey: string, prompt: string) {
 }
 
 function handleAIError(response: Response) {
-  if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  if (response.status === 402) return new Response(JSON.stringify({ error: "Credits required. Please add funds." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  // Always return HTTP 200 with a fallback flag so the frontend never crashes
+  // on transient upstream rate-limit / payment errors.
+  if (response.status === 429) {
+    return new Response(
+      JSON.stringify({ error: "RATE_LIMIT", fallback: true, message: "AI is busy right now. Please try again in a moment." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  if (response.status === 402) {
+    return new Response(
+      JSON.stringify({ error: "CREDITS_REQUIRED", fallback: true, message: "AI credits exhausted. Please add funds to continue." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  if (response.status >= 500) {
+    return new Response(
+      JSON.stringify({ error: "SERVICE_UNAVAILABLE", fallback: true, message: "AI service temporarily unavailable. Please try again." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
   return null;
 }
 
