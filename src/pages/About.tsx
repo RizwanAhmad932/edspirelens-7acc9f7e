@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, Scale, FileText, Mail } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Scale, FileText, Mail, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppLogo } from "@/hooks/use-app-logo";
+import TakedownForm from "@/components/TakedownForm";
 
 const Section = ({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) => (
   <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-card space-y-2">
@@ -73,6 +74,14 @@ const About = () => {
             If you believe content referenced through this Website infringes your rights, please contact us with the URL and proof of
             ownership. We will act expeditiously to remove the reference in accordance with applicable law.
           </p>
+        </Section>
+
+        <Section icon={Gavel} title="Submit a Takedown / Complaint Notice">
+          <p>
+            Use the form below to file a formal DMCA (Section 512) or IT Act (Section 79) takedown request, or to lodge any other
+            complaint about referenced content. All fields marked with * are required. Knowingly false notices may incur liability.
+          </p>
+          <TakedownForm />
         </Section>
 
         <p className="text-xs text-center text-muted-foreground pt-4 pb-8">
