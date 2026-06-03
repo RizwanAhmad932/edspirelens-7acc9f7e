@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppLogo } from "@/hooks/use-app-logo";
 import VideoInput from "@/components/VideoInput";
+import YouTubeSearch from "@/components/YouTubeSearch";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import AudioPlayer from "@/components/AudioPlayer";
 import HistorySection from "@/components/HistorySection";
@@ -239,6 +240,10 @@ const Index = () => {
 
         <VideoInput onSubmit={handleAnalyze} isLoading={isLoading} />
 
+        {!overlayMode && (
+          <YouTubeSearch onSelect={handleAnalyze} />
+        )}
+
         {overlayMode && currentAnalysis && (
           <div className="space-y-4">
             <YouTubeEmbed videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
@@ -277,6 +282,11 @@ const Index = () => {
       )}
 
       <Suspense fallback={null}><AppDrawer /></Suspense>
+      <footer className="max-w-7xl mx-auto px-4 py-6 text-center text-xs text-muted-foreground">
+        <button onClick={() => navigate("/about")} className="hover:text-accent underline-offset-2 hover:underline">
+          About & Legal
+        </button>
+      </footer>
       {tutorialOpen && (
         <Suspense fallback={null}>
           <TutorialOverlay onClose={() => setTutorialOpen(false)} />
