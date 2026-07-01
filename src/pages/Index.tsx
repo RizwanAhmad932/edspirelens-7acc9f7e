@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, memo } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, memo } from "react";
 import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppLogo } from "@/hooks/use-app-logo";
 import VideoInput from "@/components/VideoInput";
 import YouTubeSearch from "@/components/YouTubeSearch";
-import YouTubeEmbed from "@/components/YouTubeEmbed";
+import YouTubeEmbed, { YouTubeEmbedHandle } from "@/components/YouTubeEmbed";
 import AudioPlayer from "@/components/AudioPlayer";
 import HistorySection from "@/components/HistorySection";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -46,6 +46,7 @@ const Index = () => {
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const navigate = useNavigate();
   const logo = useAppLogo();
+  const videoRef = useRef<YouTubeEmbedHandle>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -246,7 +247,7 @@ const Index = () => {
 
         {overlayMode && currentAnalysis && (
           <div className="space-y-4">
-            <YouTubeEmbed videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
+            <YouTubeEmbed ref={videoRef} videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
             <AudioPlayer videoUrl={currentAnalysis.video_url} />
           </div>
         )}
@@ -277,6 +278,7 @@ const Index = () => {
             videoTitle={currentAnalysis.video_title}
             analysisId={currentAnalysis.id}
             onQuizComplete={handleQuizComplete}
+            onSeekVideo={(sec) => videoRef.current?.seekTo(sec)}
           />
         </Suspense>
       )}

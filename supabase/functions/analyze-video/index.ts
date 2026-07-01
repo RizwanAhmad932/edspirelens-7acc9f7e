@@ -583,12 +583,18 @@ ${transcriptText.substring(0, 10000)}`,
     }
 
     if (action === "chat") {
-      const { messages, videoTitle: title, transcript: transcriptText } = body;
+      const { messages, videoTitle: title, transcript: transcriptText, includeTimestamps } = body;
 
       const chatResponse = await aiCall(LOVABLE_API_KEY, [
         {
           role: "system",
-          content: `You are an AI tutor helping a student understand a video titled "${title}". Use the transcript context below to answer questions accurately and thoroughly. If the answer isn't in the transcript, say so.
+          content: `You are an AI tutor helping a student understand a video titled "${title}". Use the timestamped transcript context below to answer questions accurately and thoroughly.
+
+${includeTimestamps ? `IMPORTANT — TIMESTAMP CITATIONS:
+- Whenever you reference a concept from the video, cite the moment(s) it is explained using inline bracket tokens exactly like [M:SS] or [MM:SS] (e.g. [3:42], [12:05]).
+- Use the SAME timestamps that appear in the transcript context (do not invent new ones).
+- Include at least one timestamp per topic you explain, so the student can jump to that moment.
+- Keep answers concise and clear; markdown lists are fine.` : ""}
 
 Video transcript context:
 ${transcriptText || "No transcript available."}`,
