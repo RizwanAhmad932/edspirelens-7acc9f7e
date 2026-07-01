@@ -28,9 +28,10 @@ interface FloatingLensProps {
   videoTitle: string;
   onQuizComplete?: (score: number, total: number) => void;
   analysisId?: string;
+  onSeekVideo?: (seconds: number) => void;
 }
 
-const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizLoading, flashcards, flashcardsLoading, videoTitle, onQuizComplete, analysisId }: FloatingLensProps) => {
+const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizLoading, flashcards, flashcardsLoading, videoTitle, onQuizComplete, analysisId, onSeekVideo }: FloatingLensProps) => {
   const [minimized, setMinimized] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -151,7 +152,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                   )}
                 </TabsContent>
                 <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} /></TabsContent>
-                <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} /></TabsContent>
+                <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></TabsContent>
                 <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
                 <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
                 <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
@@ -249,7 +250,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                 )}
               </TabsContent>
               <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} /></TabsContent>
-              <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} /></TabsContent>
+              <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></TabsContent>
               <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
               <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
               <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
