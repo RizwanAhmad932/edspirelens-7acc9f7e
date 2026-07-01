@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Loader2, Sparkles, Copy, Lightbulb } from "lucide-react";
+import { Loader2, Sparkles, Copy, Lightbulb, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { generateShortNotes, ShortNotes, TranscriptSegment } from "@/lib/mockData";
+import { exportCheatSheetPdf } from "@/lib/pdfExport";
 
 interface Props {
   chapterTitle: string;
@@ -41,14 +42,24 @@ const ShortNotesPanel = ({ chapterTitle, transcript }: Props) => {
     toast.success("Notes copied!");
   };
 
+  const handleExport = () => {
+    if (!notes) return;
+    exportCheatSheetPdf(chapterTitle, notes);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-sm font-semibold uppercase tracking-wider">Short Notes</h3>
         {notes && (
-          <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 text-xs">
-            <Copy className="h-3 w-3" /> Copy
-          </Button>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 text-xs">
+              <Copy className="h-3 w-3" /> Copy
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleExport} className="h-7 gap-1 text-xs">
+              <Download className="h-3 w-3" /> PDF
+            </Button>
+          </div>
         )}
       </div>
 

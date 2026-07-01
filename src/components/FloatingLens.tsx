@@ -151,7 +151,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                     <p className="text-xs text-muted-foreground text-center py-8">No quiz available yet.</p>
                   )}
                 </TabsContent>
-                <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} /></TabsContent>
+                <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} deckId={analysisId} /></TabsContent>
                 <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></TabsContent>
                 <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
                 <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
@@ -249,7 +249,7 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                   <p className="text-xs text-muted-foreground text-center py-8">No quiz available yet.</p>
                 )}
               </TabsContent>
-              <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} /></TabsContent>
+              <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} deckId={analysisId} /></TabsContent>
               <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></TabsContent>
               <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
               <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
