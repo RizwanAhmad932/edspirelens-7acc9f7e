@@ -12,6 +12,8 @@ import HistorySection from "@/components/HistorySection";
 import ThemeToggle from "@/components/ThemeToggle";
 import AdBanner, { AdPopup } from "@/components/AdBanner";
 import { MiniMascot } from "@/components/MascotAvatar";
+import InstallButton from "@/components/InstallButton";
+import SimulatedOverlay from "@/components/SimulatedOverlay";
 import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
@@ -189,6 +191,7 @@ const Index = () => {
             </h1>
           </div>
           <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+            <InstallButton />
             {currentAnalysis && !lensOpen && (
               <button
                 onClick={() => setLensOpen(true)}
@@ -234,6 +237,7 @@ const Index = () => {
             <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto px-4 sm:px-0">
               Paste any YouTube lecture and get the teacher's board notes, infographics, board-aligned quizzes, PYQs and a personal AI tutor — instantly.
             </p>
+            <SimulatedOverlay />
           </div>
         )}
 
