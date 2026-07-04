@@ -11,6 +11,14 @@ type BeforeInstallPromptEvent = Event & {
 const isIOS = () =>
   typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
 
+const isAndroid = () =>
+  typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+
+const isChromiumMobile = () =>
+  typeof navigator !== "undefined" &&
+  /android/i.test(navigator.userAgent) &&
+  /(Chrome|SamsungBrowser|EdgA|OPR)\//i.test(navigator.userAgent);
+
 const isStandalone = () =>
   typeof window !== "undefined" &&
   (window.matchMedia("(display-mode: standalone)").matches ||
@@ -60,9 +68,24 @@ const InstallButton = () => {
       });
       return;
     }
-    toast.info("Open your browser menu and tap 'Install app' or 'Add to Home screen'.", {
-      duration: 5000,
-    });
+    if (isAndroid()) {
+      if (isChromiumMobile()) {
+        toast.info(
+          "Tap the ⋮ menu (top-right) → 'Install app' or 'Add to Home screen'. If you opened this from Instagram/Facebook, tap ⋮ → 'Open in Chrome' first.",
+          { duration: 7000 }
+        );
+      } else {
+        toast.info(
+          "For direct install, open this page in Chrome, then tap ⋮ menu → 'Install app'.",
+          { duration: 7000 }
+        );
+      }
+      return;
+    }
+    toast.info(
+      "Click the install icon in your browser's address bar, or open the menu → 'Install Edspire Lens'.",
+      { duration: 6000 }
+    );
   };
 
   return (
