@@ -1,12 +1,14 @@
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface YouTubeEmbedHandle {
   seekTo: (seconds: number) => void;
+  getCurrentTime: () => number;
 }
 
 interface YouTubeEmbedProps {
   videoUrl: string;
   videoTitle: string;
+  onTimeUpdate?: (seconds: number) => void;
 }
 
 function extractVideoId(url: string): string | null {
@@ -21,9 +23,10 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, YouTubeEmbedProps>(({ videoUrl, videoTitle }, ref) => {
+const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, YouTubeEmbedProps>(({ videoUrl, videoTitle, onTimeUpdate }, ref) => {
   const videoId = extractVideoId(videoUrl);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const currentTimeRef = useRef(0);
 
   useImperativeHandle(ref, () => ({
     seekTo: (seconds: number) => {
@@ -33,7 +36,46 @@ const YouTubeEmbed = forwardRef<YouTubeEmbedHandle, YouTubeEmbedProps>(({ videoU
       win.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [Math.max(0, seconds), true] }), "*");
       iframeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     },
+    getCurrentTime: () => currentTimeRef.current,
   }), []);
+
+  useEffect(() => {
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    // Subscribe to YT iframe API events
+    const onLoad = () => {
+      win.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
+      win.postMessage(JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }), "*");
+    };
+    const iframe = iframeRef.current;
+    iframe?.addEventListener("load", onLoad);
+
+    const onMsg = (e: MessageEvent) => {
+      if (typeof e.data !== "string") return;
+      try {
+        const data = JSON.parse(e.data);
+        const t = data?.info?.currentTime;
+        if (typeof t === "number") {
+          currentTimeRef.current = t;
+          onTimeUpdate?.(t);
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener("message", onMsg);
+
+    // Poll for current time
+    const poll = window.setInterval(() => {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: "getCurrentTime", args: [] }), "*"
+      );
+    }, 1500);
+
+    return () => {
+      iframe?.removeEventListener("load", onLoad);
+      window.removeEventListener("message", onMsg);
+      window.clearInterval(poll);
+    };
+  }, [videoId, onTimeUpdate]);
 
   if (!videoId) {
     return (
