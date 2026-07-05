@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Share, Plus, MoreVertical, ShieldCheck, Check } from "lucide-react";
+import { Download, Share, Plus, MoreVertical, ShieldCheck, Check, Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -30,6 +30,9 @@ const isSafari = () =>
   typeof navigator !== "undefined" &&
   /safari/i.test(navigator.userAgent) &&
   !/crios|fxios|edgios|opios/i.test(navigator.userAgent);
+
+const isIOSInAppBrowser = () =>
+  isIOS() && /(FBAN|FBAV|Instagram|Line|Twitter|LinkedInApp|GSA|DuckDuckGo)/i.test(navigator.userAgent);
 
 const isSecureContext = () =>
   typeof window !== "undefined" &&
@@ -84,10 +87,6 @@ const InstallButton = () => {
       return;
     }
     if (isIOS()) {
-      if (!isSafari()) {
-        toast.info("On iPhone, open this page in Safari first, then tap Install.", { duration: 6000 });
-        return;
-      }
       setIosOpen(true);
       return;
     }
@@ -115,7 +114,8 @@ const InstallButton = () => {
     </Button>
 
     <Dialog open={iosOpen} onOpenChange={setIosOpen}>
-      <DialogContent className="max-w-sm rounded-2xl">
+      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden">
+        <div className="p-5">
         <DialogHeader>
           <div className="mx-auto mb-2 flex items-center justify-center">
             <img src="/icon-192.png" alt="Edspire Lens" className="h-16 w-16 rounded-2xl shadow-md" />
@@ -125,22 +125,92 @@ const InstallButton = () => {
             <ShieldCheck className="h-3.5 w-3.5 text-green-500" /> Secure install · No app store needed
           </DialogDescription>
         </DialogHeader>
-        <ol className="space-y-3 text-sm mt-2">
-          <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">1</span>
-            <span className="flex-1">Tap the <Share className="inline h-4 w-4 mx-0.5 text-blue-500" /> <b>Share</b> button at the bottom of Safari.</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">2</span>
-            <span className="flex-1">Scroll and tap <Plus className="inline h-4 w-4 mx-0.5" /> <b>Add to Home Screen</b>.</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">3</span>
-            <span className="flex-1">Tap <b>Add</b> — the app icon appears on your home screen.</span>
-          </li>
-        </ol>
-        <div className="mt-3 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-          <Check className="h-3 w-3 text-green-500" /> Works offline-ready · Full-screen · HTTPS verified
+
+        {isIOSInAppBrowser() ? (
+          <div className="mt-4 space-y-3 text-sm">
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs">
+              You're inside another app's browser. iOS only allows installing from <b>Safari</b>.
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  toast.success("Link copied — paste it in Safari");
+                } catch { toast.info("Copy this URL and open it in Safari"); }
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-accent-foreground font-medium"
+            >
+              <Copy className="h-4 w-4" /> Copy link
+            </button>
+            <a
+              href={`x-safari-https://${window.location.host}${window.location.pathname}`}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border font-medium"
+            >
+              <ExternalLink className="h-4 w-4" /> Try open in Safari
+            </a>
+          </div>
+        ) : (
+          <>
+            {/* Illustrated Safari mock */}
+            <div className="mt-4 rounded-xl border border-border bg-muted/40 overflow-hidden">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-muted border-b border-border">
+                <span className="h-2 w-2 rounded-full bg-red-400" />
+                <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                <span className="h-2 w-2 rounded-full bg-green-400" />
+                <span className="ml-2 text-[10px] text-muted-foreground truncate">edspirelens.lovable.app</span>
+              </div>
+              <div className="h-16 flex items-center justify-center text-[11px] text-muted-foreground">
+                Edspire Lens preview
+              </div>
+              <div className="flex items-center justify-around py-2 border-t border-border bg-background/60">
+                <span className="text-muted-foreground">‹</span>
+                <span className="text-muted-foreground">›</span>
+                <span className="relative">
+                  <Share className="h-5 w-5 text-blue-500 animate-bounce" />
+                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-background" />
+                </span>
+                <span className="text-muted-foreground">□</span>
+                <span className="text-muted-foreground">≡</span>
+              </div>
+            </div>
+
+            <ol className="space-y-2.5 text-sm mt-4">
+              <li className="flex items-start gap-2.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">1</span>
+                <span className="flex-1">Tap the <Share className="inline h-4 w-4 mx-0.5 text-blue-500" /> <b>Share</b> icon (bottom of Safari).</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">2</span>
+                <span className="flex-1">Scroll down, tap <Plus className="inline h-4 w-4 mx-0.5" /> <b>Add to Home Screen</b>.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">3</span>
+                <span className="flex-1">Tap <b>Add</b> — the icon appears on your home screen.</span>
+              </li>
+            </ol>
+
+            {typeof navigator !== "undefined" && "share" in navigator && (
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.share({ title: "Edspire Lens", url: window.location.href });
+                  } catch { /* user cancelled */ }
+                }}
+                className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-accent-foreground font-medium text-sm"
+              >
+                <Share className="h-4 w-4" /> Open Share sheet
+              </button>
+            )}
+
+            <p className="mt-2 text-[10px] text-center text-muted-foreground">
+              Note: Apple only shows "Add to Home Screen" in Safari's own Share menu.
+            </p>
+          </>
+        )}
+
+        <div className="mt-4 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+          <Check className="h-3 w-3 text-green-500" /> HTTPS verified · Offline-ready · Full-screen
+        </div>
         </div>
       </DialogContent>
     </Dialog>
