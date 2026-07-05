@@ -14,6 +14,7 @@ import AdBanner, { AdPopup } from "@/components/AdBanner";
 import { MiniMascot } from "@/components/MascotAvatar";
 import InstallButton from "@/components/InstallButton";
 import SimulatedOverlay from "@/components/SimulatedOverlay";
+import AIQuizCompanion from "@/components/AIQuizCompanion";
 import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
@@ -49,6 +50,7 @@ const Index = () => {
   const navigate = useNavigate();
   const logo = useAppLogo();
   const videoRef = useRef<YouTubeEmbedHandle>(null);
+  const [videoTime, setVideoTime] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -251,7 +253,7 @@ const Index = () => {
 
         {overlayMode && currentAnalysis && (
           <div className="space-y-4">
-            <YouTubeEmbed ref={videoRef} videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} />
+            <YouTubeEmbed ref={videoRef} videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} onTimeUpdate={setVideoTime} />
             <AudioPlayer videoUrl={currentAnalysis.video_url} />
           </div>
         )}
@@ -285,6 +287,15 @@ const Index = () => {
             onSeekVideo={(sec) => videoRef.current?.seekTo(sec)}
           />
         </Suspense>
+      )}
+
+      {currentAnalysis && overlayMode && quiz.length > 0 && (
+        <AIQuizCompanion
+          quiz={quiz}
+          transcript={currentAnalysis.transcript}
+          getCurrentTime={() => videoRef.current?.getCurrentTime() ?? videoTime}
+          visible={!lensOpen}
+        />
       )}
 
       <Suspense fallback={null}><AppDrawer /></Suspense>
