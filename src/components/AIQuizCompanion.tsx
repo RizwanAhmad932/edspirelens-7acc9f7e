@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, X, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { QuizQuestion } from "@/lib/mockData";
+import type { QuizQuestion, TranscriptSegment } from "@/lib/mockData";
 
 interface Props {
   quiz: QuizQuestion[];
-  transcript: { start: number; text: string }[];
+  transcript: TranscriptSegment[];
   getCurrentTime: () => number;
   visible: boolean;
 }
@@ -30,13 +30,13 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
   // Map each quiz question to a transcript timestamp (heuristic keyword match).
   const timedQuiz = useMemo(() => {
     if (!quiz.length || !transcript.length) return [] as { q: QuizQuestion; at: number }[];
-    const total = transcript[transcript.length - 1]?.start || 600;
+    const total = transcript[transcript.length - 1]?.seconds || 600;
     return quiz.map((q, i) => {
       const words = q.question.toLowerCase().split(/\W+/).filter(w => w.length > 4);
       const hit = transcript.find(seg =>
         words.some(w => seg.text.toLowerCase().includes(w))
       );
-      return { q, at: hit?.start ?? ((i + 1) * total) / (quiz.length + 1) };
+      return { q, at: hit?.seconds ?? ((i + 1) * total) / (quiz.length + 1) };
     });
   }, [quiz, transcript]);
 
