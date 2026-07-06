@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.2056ceed63234be2b12f17506ac0a108",
+  "appName": "edspirelens",
+  "webDir": "dist",
+  "server": {
+    "url": "https://2056ceed-6323-4be2-b12f-17506ac0a108.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
