@@ -241,15 +241,17 @@ export async function recordQuizAttempt(payload: {
 }
 
 export async function fetchHistory(): Promise<VideoAnalysis[]> {
-  const { data, error } = await supabase
-    .from("video_analyses")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const HISTORY_CACHE_KEY = "edspire:history-cache:v1";
+  try {
+    const { data, error } = await supabase
+      .from("video_analyses")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return (data || []).map((row: any) => ({
+    const mapped: VideoAnalysis[] = (data || []).map((row: any) => ({
     id: row.id,
     video_url: row.video_url,
     video_title: row.video_title,
@@ -261,6 +263,28 @@ export async function fetchHistory(): Promise<VideoAnalysis[]> {
     quiz_total: row.quiz_total,
     created_at: row.created_at,
   }));
+    try {
+      localStorage.setItem(
+        HISTORY_CACHE_KEY,
+        JSON.stringify({ ts: Date.now(), items: mapped }),
+      );
+    } catch { /* quota */ }
+    return mapped;
+  } catch (e) {
+    // Offline / network error → return cached history (valid for 24h) so
+    // the dashboard keeps working without connectivity.
+    try {
+      const raw = localStorage.getItem(HISTORY_CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const age = Date.now() - (parsed.ts || 0);
+        if (age < 24 * 60 * 60 * 1000 && Array.isArray(parsed.items)) {
+          return parsed.items as VideoAnalysis[];
+        }
+      }
+    } catch { /* ignore */ }
+    throw e;
+  }
 }
 
 export async function updateQuizScore(analysisId: string, score: number, total: number): Promise<void> {
