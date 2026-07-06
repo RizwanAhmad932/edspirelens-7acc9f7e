@@ -136,7 +136,13 @@ const Index = () => {
         setQuizLoading(true);
         setFlashcardsLoading(true);
         generateQuiz(analysis.transcript).then(q => setQuiz(q)).catch(e => { console.error(e); toast.error("Quiz generation failed"); }).finally(() => setQuizLoading(false));
-        generateFlashcards(analysis.transcript).then(f => setFlashcards(f)).catch(e => console.error(e)).finally(() => setFlashcardsLoading(false));
+        generateFlashcards(analysis.transcript)
+          .then((f) => {
+            setFlashcards(f);
+            if (f.length === 0) toast.error("No flashcards could be generated for this video.");
+          })
+          .catch((e) => { console.error(e); toast.error(e?.message || "Flashcard generation failed"); })
+          .finally(() => setFlashcardsLoading(false));
       }
     } catch (e: any) {
       toast.error(e.message || "Failed to analyze video.");
@@ -156,7 +162,13 @@ const Index = () => {
       setQuizLoading(true);
       setFlashcardsLoading(true);
       generateQuiz(analysis.transcript).then(q => setQuiz(q)).catch(e => console.error(e)).finally(() => setQuizLoading(false));
-      generateFlashcards(analysis.transcript).then(f => setFlashcards(f)).catch(e => console.error(e)).finally(() => setFlashcardsLoading(false));
+      generateFlashcards(analysis.transcript)
+        .then((f) => {
+          setFlashcards(f);
+          if (f.length === 0) toast.error("No flashcards could be generated for this video.");
+        })
+        .catch((e) => { console.error(e); toast.error(e?.message || "Flashcard generation failed"); })
+        .finally(() => setFlashcardsLoading(false));
     }
   };
 
