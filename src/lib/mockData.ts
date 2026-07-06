@@ -139,9 +139,37 @@ export async function generateFlashcards(transcript: TranscriptSegment[]): Promi
     },
   });
 
-  if (error) throw new Error(error.message || "Failed to generate flashcards");
-  if (data?.error) throw new Error(data.message || data.error);
-  return data.flashcards || [];
+  if (error) {
+    const fb = buildFallbackFlashcards(transcript);
+    if (fb.length) return fb;
+    throw new Error(error.message || "Failed to generate flashcards");
+  }
+  if (data?.error) {
+    const fb = buildFallbackFlashcards(transcript);
+    if (fb.length) return fb;
+    throw new Error(data.message || data.error);
+  }
+  const cards: Flashcard[] = data?.flashcards || [];
+  if (cards.length === 0) return buildFallbackFlashcards(transcript);
+  return cards;
+}
+
+// Client-side fallback: build simple Q/A flashcards from transcript sentences
+// so the panel is never empty when AI is rate-limited or offline.
+function buildFallbackFlashcards(transcript: TranscriptSegment[]): Flashcard[] {
+  if (!transcript || transcript.length === 0) return [];
+  const sentences = transcript
+    .map((s) => s.text.trim())
+    .filter((t) => t.length > 40 && t.length < 240)
+    .slice(0, 12);
+  return sentences.map((text, i) => {
+    const words = text.split(/\s+/);
+    const keyword = words.find((w) => w.length > 5 && /^[A-Za-z]+$/.test(w)) || words[0] || `Key #${i + 1}`;
+    return {
+      front: `What is meant by "${keyword}" here?`,
+      back: text,
+    };
+  });
 }
 
 export async function generateInfographic(chapterTitle: string, summary: string[]): Promise<string> {
