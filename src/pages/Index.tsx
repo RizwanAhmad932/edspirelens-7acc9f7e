@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense, memo } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, memo } from "react";
 import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
