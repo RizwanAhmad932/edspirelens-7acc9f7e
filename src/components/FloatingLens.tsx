@@ -157,18 +157,18 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                       <p className="text-xs text-muted-foreground">Extracting questions...</p>
                     </div>
                   ) : quiz.length > 0 ? (
-                    <QuizPanel questions={quiz} onComplete={onQuizComplete} videoTitle={videoTitle} analysisId={analysisId} />
+                    <Lazy><QuizPanel questions={quiz} onComplete={onQuizComplete} videoTitle={videoTitle} analysisId={analysisId} /></Lazy>
                   ) : (
                     <p className="text-xs text-muted-foreground text-center py-8">No quiz available yet.</p>
                   )}
                 </TabsContent>
-                <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} deckId={analysisId} /></TabsContent>
-                <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></TabsContent>
-                <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
-                <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
-                <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
-                <TabsContent value="shortnotes"><ShortNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
-                <TabsContent value="diagram"><DiagramQuizPanel chapterTitle={videoTitle} transcript={transcript} analysisId={analysisId} /></TabsContent>
+                <TabsContent value="flashcards"><Lazy><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} deckId={analysisId} /></Lazy></TabsContent>
+                <TabsContent value="chat"><Lazy><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></Lazy></TabsContent>
+                <TabsContent value="infographic"><Lazy><InfographicPanel chapterTitle={videoTitle} summary={summary} /></Lazy></TabsContent>
+                <TabsContent value="pyq"><Lazy><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></Lazy></TabsContent>
+                <TabsContent value="board"><Lazy><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></Lazy></TabsContent>
+                <TabsContent value="shortnotes"><Lazy><ShortNotesPanel chapterTitle={videoTitle} transcript={transcript} /></Lazy></TabsContent>
+                <TabsContent value="diagram"><Lazy><DiagramQuizPanel chapterTitle={videoTitle} transcript={transcript} analysisId={analysisId} /></Lazy></TabsContent>
               </Tabs>
             </div>
           )}
@@ -255,18 +255,18 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                     <p className="text-xs text-muted-foreground">Extracting all questions from video...</p>
                   </div>
                 ) : quiz.length > 0 ? (
-                  <QuizPanel questions={quiz} onComplete={onQuizComplete} videoTitle={videoTitle} analysisId={analysisId} />
+                  <Lazy><QuizPanel questions={quiz} onComplete={onQuizComplete} videoTitle={videoTitle} analysisId={analysisId} /></Lazy>
                 ) : (
                   <p className="text-xs text-muted-foreground text-center py-8">No quiz available yet.</p>
                 )}
               </TabsContent>
-              <TabsContent value="flashcards"><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} deckId={analysisId} /></TabsContent>
-              <TabsContent value="chat"><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></TabsContent>
-              <TabsContent value="infographic"><InfographicPanel chapterTitle={videoTitle} summary={summary} /></TabsContent>
-              <TabsContent value="pyq"><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
-              <TabsContent value="board"><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
-              <TabsContent value="shortnotes"><ShortNotesPanel chapterTitle={videoTitle} transcript={transcript} /></TabsContent>
-              <TabsContent value="diagram"><DiagramQuizPanel chapterTitle={videoTitle} transcript={transcript} analysisId={analysisId} /></TabsContent>
+              <TabsContent value="flashcards"><Lazy><FlashcardPanel flashcards={flashcards} loading={flashcardsLoading} deckId={analysisId} /></Lazy></TabsContent>
+              <TabsContent value="chat"><Lazy><ChatPanel videoTitle={videoTitle} transcript={transcript} onSeekVideo={onSeekVideo} /></Lazy></TabsContent>
+              <TabsContent value="infographic"><Lazy><InfographicPanel chapterTitle={videoTitle} summary={summary} /></Lazy></TabsContent>
+              <TabsContent value="pyq"><Lazy><PYQPanel chapterTitle={videoTitle} transcript={transcript} /></Lazy></TabsContent>
+              <TabsContent value="board"><Lazy><TeacherNotesPanel chapterTitle={videoTitle} transcript={transcript} /></Lazy></TabsContent>
+              <TabsContent value="shortnotes"><Lazy><ShortNotesPanel chapterTitle={videoTitle} transcript={transcript} /></Lazy></TabsContent>
+              <TabsContent value="diagram"><Lazy><DiagramQuizPanel chapterTitle={videoTitle} transcript={transcript} analysisId={analysisId} /></Lazy></TabsContent>
             </Tabs>
           </div>
         )}
