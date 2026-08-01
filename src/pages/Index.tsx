@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, memo } from "react";
 import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,7 @@ import {
   generateQuiz,
   generateFlashcards,
   fetchHistory,
+  getCachedHistory,
   updateQuizScore,
   VideoAnalysis,
   QuizQuestion,
