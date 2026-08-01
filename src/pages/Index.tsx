@@ -151,7 +151,7 @@ const Index = () => {
     }
   };
 
-  const handleSelectHistory = async (analysis: VideoAnalysis) => {
+  const handleSelectHistory = useCallback(async (analysis: VideoAnalysis) => {
     setCurrentAnalysis(analysis);
     setLensOpen(true);
     setOverlayMode(true);
