@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, memo } from "react";
 import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,7 @@ import {
   generateQuiz,
   generateFlashcards,
   fetchHistory,
+  getCachedHistory,
   updateQuizScore,
   VideoAnalysis,
   QuizQuestion,
@@ -42,8 +44,8 @@ const Index = () => {
   const [quizLoading, setQuizLoading] = useState(false);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
-  const [history, setHistory] = useState<VideoAnalysis[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
+  const [history, setHistory] = useState<VideoAnalysis[]>(() => getCachedHistory() || []);
+  const [historyLoading, setHistoryLoading] = useState(() => !getCachedHistory());
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
@@ -105,7 +107,6 @@ const Index = () => {
   };
 
   const loadHistory = async () => {
-    setHistoryLoading(true);
     try {
       const data = await fetchHistory();
       setHistory(data);
@@ -273,8 +274,18 @@ const Index = () => {
         <AdBanner placement="between_content" />
 
         {historyLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="w-full max-w-4xl mx-auto">
+            <Skeleton className="h-6 w-44 mb-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="p-5 rounded-xl bg-card border border-border space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <HistorySection history={history} onSelect={handleSelectHistory} />

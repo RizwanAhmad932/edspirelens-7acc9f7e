@@ -240,8 +240,31 @@ export async function recordQuizAttempt(payload: {
   });
 }
 
-export async function fetchHistory(): Promise<VideoAnalysis[]> {
-  const HISTORY_CACHE_KEY = "edspire:history-cache:v1";
+const HISTORY_CACHE_KEY = "edspire:history-cache:v1";
+let historyInflight: Promise<VideoAnalysis[]> | null = null;
+
+/** Instantly readable cached history (up to 24h old) for first paint. */
+export function getCachedHistory(): VideoAnalysis[] | null {
+  try {
+    const raw = localStorage.getItem(HISTORY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const age = Date.now() - (parsed.ts || 0);
+    if (age < 24 * 60 * 60 * 1000 && Array.isArray(parsed.items)) {
+      return parsed.items as VideoAnalysis[];
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+export function fetchHistory(): Promise<VideoAnalysis[]> {
+  // Dedupe concurrent callers so a burst of renders makes one request.
+  if (historyInflight) return historyInflight;
+  historyInflight = fetchHistoryUncached().finally(() => { historyInflight = null; });
+  return historyInflight;
+}
+
+async function fetchHistoryUncached(): Promise<VideoAnalysis[]> {
   try {
     const { data, error } = await supabase
       .from("video_analyses")
@@ -273,16 +296,8 @@ export async function fetchHistory(): Promise<VideoAnalysis[]> {
   } catch (e) {
     // Offline / network error → return cached history (valid for 24h) so
     // the dashboard keeps working without connectivity.
-    try {
-      const raw = localStorage.getItem(HISTORY_CACHE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const age = Date.now() - (parsed.ts || 0);
-        if (age < 24 * 60 * 60 * 1000 && Array.isArray(parsed.items)) {
-          return parsed.items as VideoAnalysis[];
-        }
-      }
-    } catch { /* ignore */ }
+    const cached = getCachedHistory();
+    if (cached) return cached;
     throw e;
   }
 }
