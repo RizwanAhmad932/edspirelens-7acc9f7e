@@ -31,7 +31,7 @@ const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
 const FloatingLens = lazy(() => import("@/components/FloatingLens"));
 const AppDrawer = lazy(() => import("@/components/AppDrawer"));
 const TutorialOverlay = lazy(() => import("@/components/TutorialOverlay"));
-import { shouldShowTutorial } from "@/components/TutorialOverlay";
+import { shouldShowTutorial } from "@/lib/tutorial";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
