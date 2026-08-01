@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Clock, Trophy, ChevronRight } from "lucide-react";
 import { VideoAnalysis } from "@/lib/mockData";
 
@@ -6,7 +7,7 @@ interface HistorySectionProps {
   onSelect: (analysis: VideoAnalysis) => void;
 }
 
-const HistorySection = ({ history, onSelect }: HistorySectionProps) => {
+const HistorySection = memo(({ history, onSelect }: HistorySectionProps) => {
   if (history.length === 0) return null;
 
   return (
@@ -48,6 +49,8 @@ const HistorySection = ({ history, onSelect }: HistorySectionProps) => {
       </div>
     </div>
   );
-};
+});
+
+HistorySection.displayName = "HistorySection";
 
 export default HistorySection;
