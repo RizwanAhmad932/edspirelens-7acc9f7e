@@ -9,7 +9,7 @@ import { Loader2, ArrowLeft, Star, Zap, Trophy, GraduationCap, BookOpen, Target,
 import { useAppLogo } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { MascotAvatar } from "@/components/MascotAvatar";
-import { resetTutorial } from "@/components/TutorialOverlay";
+import { resetTutorial } from "@/lib/tutorial";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Other"];
 const CLASSES = ["7", "8", "9", "10", "11", "12"];

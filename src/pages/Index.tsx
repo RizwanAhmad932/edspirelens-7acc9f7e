@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense, memo } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, memo } from "react";
 import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
 const FloatingLens = lazy(() => import("@/components/FloatingLens"));
 const AppDrawer = lazy(() => import("@/components/AppDrawer"));
 const TutorialOverlay = lazy(() => import("@/components/TutorialOverlay"));
-import { shouldShowTutorial } from "@/components/TutorialOverlay";
+import { shouldShowTutorial } from "@/lib/tutorial";
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -151,7 +151,7 @@ const Index = () => {
     }
   };
 
-  const handleSelectHistory = async (analysis: VideoAnalysis) => {
+  const handleSelectHistory = useCallback(async (analysis: VideoAnalysis) => {
     setCurrentAnalysis(analysis);
     setLensOpen(true);
     setOverlayMode(true);
@@ -170,7 +170,7 @@ const Index = () => {
         .catch((e) => { console.error(e); toast.error(e?.message || "Flashcard generation failed"); })
         .finally(() => setFlashcardsLoading(false));
     }
-  };
+  }, []);
 
   const handleQuizComplete = async (score: number, total: number) => {
     if (currentAnalysis?.id) {
