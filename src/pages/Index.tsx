@@ -170,7 +170,7 @@ const Index = () => {
         .catch((e) => { console.error(e); toast.error(e?.message || "Flashcard generation failed"); })
         .finally(() => setFlashcardsLoading(false));
     }
-  };
+  }, []);
 
   const handleQuizComplete = async (score: number, total: number) => {
     if (currentAnalysis?.id) {
