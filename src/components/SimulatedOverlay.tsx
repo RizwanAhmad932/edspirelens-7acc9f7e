@@ -14,14 +14,19 @@ const SimulatedOverlay = ({ videoTitle = "Cell Division — Mitosis Explained" }
   const [tab, setTab] = useState<"chat" | "notes" | "quiz">("chat");
 
   return (
-    <div className="w-full max-w-4xl mx-auto animate-fade-in">
-      <div className="text-center mb-3">
-        <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">
-          <Sparkles className="h-3 w-3 text-accent" /> Live Preview — Lens Over YouTube
+    <div className="w-full animate-fade-in">
+      <div className="flex items-center justify-between mb-3">
+        <span className="hud-label inline-flex items-center gap-1.5">
+          <Sparkles className="h-3 w-3" /> Live Preview — Lens Over YouTube
+        </span>
+        <span className="inline-flex items-center gap-1.5 font-mono-hud text-[10px] text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" /> LIVE
         </span>
       </div>
 
-      <div className="relative rounded-2xl overflow-hidden bg-black shadow-elevated aspect-video border border-border">
+      <div className="relative rounded-2xl overflow-hidden bg-black shadow-elevated aspect-video border border-foreground/10 scanline">
+        {/* CRT scan lines */}
+        <div className="absolute inset-0 scan-lines pointer-events-none z-10" />
         {/* Fake YouTube player */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
           <div className="text-center">
