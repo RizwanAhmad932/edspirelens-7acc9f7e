@@ -38,7 +38,7 @@ const SimulatedOverlay = ({ videoTitle = "Cell Division — Mitosis Explained" }
         </div>
 
         {/* Fake YouTube controls */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-3">
+        <div className="absolute z-20 bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-3">
           <div className="h-1 bg-white/20 rounded-full mb-2">
             <div className="h-full w-1/3 bg-red-600 rounded-full relative">
               <div className="absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 bg-red-600 rounded-full" />
@@ -54,7 +54,7 @@ const SimulatedOverlay = ({ videoTitle = "Cell Division — Mitosis Explained" }
 
         {/* Floating Lens widget overlay */}
         {lensOpen && (
-          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 w-[62%] sm:w-[45%] max-w-[300px] rounded-xl bg-card/95 glass border border-border shadow-elevated overflow-hidden animate-scale-in">
+          <div className="absolute z-30 top-2 right-2 sm:top-4 sm:right-4 w-[62%] sm:w-[45%] max-w-[300px] rounded-xl glass border border-foreground/10 shadow-elevated overflow-hidden animate-scale-in">
             <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border bg-gradient-to-r from-accent/20 to-transparent">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 text-accent" />
@@ -117,7 +117,7 @@ const SimulatedOverlay = ({ videoTitle = "Cell Division — Mitosis Explained" }
         {!lensOpen && (
           <button
             onClick={() => setLensOpen(true)}
-            className="absolute top-3 right-3 h-8 px-3 rounded-full gradient-accent text-accent-foreground text-[10px] font-medium shadow-lg flex items-center gap-1 animate-scale-in"
+            className="absolute z-30 top-3 right-3 h-8 px-3 rounded-full gradient-accent text-accent-foreground text-[10px] font-medium shadow-glow flex items-center gap-1 animate-scale-in"
           >
             <Sparkles className="h-3 w-3" /> Open Lens
           </button>
