@@ -192,16 +192,21 @@ const Index = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
+    <div className="relative min-h-screen min-h-[100dvh] gradient-surface overflow-x-hidden">
+      {/* Ambient glow field */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
+        <div className="absolute -top-40 -left-32 h-[26rem] w-[26rem] rounded-full bg-accent/20 blur-[120px] animate-glow-pulse" />
+        <div className="absolute -bottom-40 -right-32 h-[26rem] w-[26rem] rounded-full bg-primary/10 blur-[120px]" />
+      </div>
       <Suspense fallback={null}><FestivalOverlay /></Suspense>
       <AdPopup />
 
       {/* Header */}
-      <header className="border-b border-border bg-card/80 glass sticky top-0 z-40 safe-top animate-fade-in">
+      <header className="border-b border-foreground/10 glass sticky top-0 z-40 safe-top animate-fade-in">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <img src={logo} alt="Edspire Lens" className="h-7 w-7 sm:h-10 sm:w-10 object-contain shrink-0" />
-            <h1 className="font-display text-base sm:text-xl font-bold text-foreground truncate">
+            <h1 className="font-display text-base sm:text-xl font-bold text-foreground truncate uppercase tracking-tighter">
               Edspire <span className="text-gradient">Lens</span>
             </h1>
           </div>
@@ -236,60 +241,92 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-6 sm:space-y-12">
+      <main className="max-w-6xl mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-6 sm:space-y-10">
         {/* Hero */}
         {!overlayMode && (
-          <div className="text-center space-y-3 sm:space-y-6 max-w-2xl mx-auto pt-2 sm:pt-8 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-accent/10 text-accent text-xs sm:text-sm font-medium animate-scale-in">
-              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Your AI Study Companion for Every Lecture
+          <div className="text-center space-y-3 sm:space-y-5 max-w-3xl mx-auto pt-1 sm:pt-4 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/30 bg-accent/10 animate-scale-in">
+              <Sparkles className="h-3 w-3 text-accent" />
+              <span className="hud-label">AI Study Companion</span>
             </div>
-            <h2 className="font-display text-2xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight">
-              Turn any lecture into
-              <br />
-              <span className="text-gradient">complete chapter mastery</span>
+            <h2 className="font-display text-[1.7rem] leading-[1.12] sm:text-5xl font-bold text-foreground">
+              Turn any lecture into{" "}
+              <span className="text-gradient">complete chapter mastery.</span>
             </h2>
-            <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto px-4 sm:px-0">
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto px-2 sm:px-0">
               Paste any YouTube lecture and get the teacher's board notes, infographics, board-aligned quizzes, PYQs and a personal AI tutor — instantly.
             </p>
-            <SimulatedOverlay />
           </div>
         )}
 
-        <AdBanner placement="home" />
-
         <VideoInput onSubmit={handleAnalyze} isLoading={isLoading} />
 
-        {!overlayMode && (
-          <YouTubeSearch onSelect={handleAnalyze} />
-        )}
+        <AdBanner placement="home" />
 
-        {overlayMode && currentAnalysis && (
+        {overlayMode && currentAnalysis ? (
           <div className="space-y-4">
             <YouTubeEmbed ref={videoRef} videoUrl={currentAnalysis.video_url} videoTitle={currentAnalysis.video_title} onTimeUpdate={setVideoTime} />
             <AudioPlayer videoUrl={currentAnalysis.video_url} />
           </div>
-        )}
+        ) : null}
+
+        {/* Bento grid */}
+        <div className="grid grid-cols-12 gap-4 sm:gap-6">
+          {!overlayMode && (
+            <>
+              <section className="col-span-12 lg:col-span-8 bento p-4 sm:p-5 relative overflow-hidden">
+                <div className="absolute inset-0 grid-noise pointer-events-none" />
+                <div className="relative"><SimulatedOverlay /></div>
+              </section>
+
+              <section className="col-span-12 lg:col-span-4 bento p-4 sm:p-5 relative overflow-hidden flex flex-col">
+                <div className="absolute inset-0 grid-noise pointer-events-none" />
+                <div className="relative flex-1 flex flex-col">
+                  <h3 className="hud-label mb-3">Discover Lectures</h3>
+                  <YouTubeSearch onSelect={handleAnalyze} />
+                  <div className="mt-auto pt-5">
+                    <div className="rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/15 to-transparent p-4">
+                      <p className="font-mono-hud text-[10px] uppercase tracking-widest text-accent mb-1">Pro Tip</p>
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        Install Edspire Lens to your home screen and keep the AI tutor one tap away while you study.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+
+          <section className="col-span-12 bento p-4 sm:p-5 relative overflow-hidden">
+            <div className="absolute inset-0 grid-noise pointer-events-none" />
+            <div className="relative">
+              {historyLoading ? (
+                <div className="w-full">
+                  <Skeleton className="h-4 w-40 mb-4" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="p-5 rounded-2xl border border-foreground/10 space-y-3">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-2 w-full rounded-full" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : history.length > 0 ? (
+                <HistorySection history={history} onSelect={handleSelectHistory} />
+              ) : (
+                <div className="text-center py-6">
+                  <p className="hud-label mb-2">Memory Index Empty</p>
+                  <p className="text-xs text-muted-foreground">Analyze your first lecture to start building mastery.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
 
         <AdBanner placement="between_content" />
-
-        {historyLoading ? (
-          <div className="w-full max-w-4xl mx-auto">
-            <Skeleton className="h-6 w-44 mb-4" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="p-5 rounded-xl bg-card border border-border space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <HistorySection history={history} onSelect={handleSelectHistory} />
-        )}
       </main>
 
       {currentAnalysis && (

@@ -13,8 +13,9 @@ export default {
       },
     },
     fontFamily: {
-      sans: ['Inter', 'system-ui', 'sans-serif'],
-      display: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
+      sans: ['Work Sans', 'system-ui', 'sans-serif'],
+      display: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+      mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
     },
     extend: {
       colors: {
