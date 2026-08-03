@@ -9,7 +9,7 @@
     <meta name="author" content="Lovable" />
 
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0F172A" />
+    <meta name="theme-color" content="#0F1220" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
@@ -36,6 +36,16 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (t !== "light") document.documentElement.classList.add("dark");
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
