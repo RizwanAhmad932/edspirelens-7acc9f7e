@@ -647,8 +647,15 @@ ${transcriptText || "No transcript available."}`,
       const snResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "You write ultra-concise exam revision cheat sheets. Output crisp 1-line bullets that a student can revise in under 5 minutes. Highlight formulas, key terms, and must-remember facts." },
-          { role: "user", content: `Create SHORT NOTES cheat-sheet for "${chapterTitle}".\n\nTranscript:\n${transcriptText.substring(0, 15000)}` }
+          { role: "system", content: `You write ultra-concise, exam-accurate revision cheat sheets.
+
+RULES:
+- 12-18 crisp one-line key points, ordered exactly as taught in the video. No filler, no "the teacher explained...".
+- Every formula the teacher used, written in clean plain-text notation with the meaning of each symbol and its unit.
+- 6-10 key terms with one-line, textbook-precise definitions.
+- 2-4 memory mnemonics/tricks and 3-5 common mistakes students make in exams on this topic.
+- Only use content actually present in the transcript. Never invent formulas.` },
+          { role: "user", content: `Create a SHORT NOTES revision cheat-sheet for "${chapterTitle}" that a student can revise in under 5 minutes before an exam. Include keyPoints, formulas, keyTerms, mnemonics, commonMistakes and one rememberTip.\n\nTranscript:\n${transcriptText.substring(0, 20000)}` }
         ],
         [{
           type: "function",
@@ -662,9 +669,11 @@ ${transcriptText || "No transcript available."}`,
                 keyPoints: { type: "array", items: { type: "string" } },
                 formulas: { type: "array", items: { type: "string" } },
                 keyTerms: { type: "array", items: { type: "object", properties: { term: { type: "string" }, definition: { type: "string" } }, required: ["term", "definition"], additionalProperties: false } },
+                mnemonics: { type: "array", items: { type: "string" } },
+                commonMistakes: { type: "array", items: { type: "string" } },
                 rememberTip: { type: "string" },
               },
-              required: ["title", "keyPoints", "formulas", "keyTerms", "rememberTip"],
+              required: ["title", "keyPoints", "formulas", "keyTerms", "mnemonics", "commonMistakes", "rememberTip"],
               additionalProperties: false,
             },
           },
@@ -701,8 +710,8 @@ ${transcriptText || "No transcript available."}`,
       const qResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You write diagram-based labeling MCQs in the style of ${examLabel} exams.` },
-          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E in the format: "What is the part labeled X in the diagram?" with 4 plausible options.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
+          { role: "system", content: `You write diagram-based labeling MCQs in the exact style of ${examLabel} exams. Exactly one option is correct, the other three are anatomically/scientifically plausible distractors from the same diagram family. Add a one-line explanation of the correct part's function or identity.` },
+          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E, e.g. "The part labeled A in the diagram is:" with 4 plausible options and an explanation.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
         ],
         [{
           type: "function",
@@ -721,8 +730,9 @@ ${transcriptText || "No transcript available."}`,
                       question: { type: "string" },
                       options: { type: "array", items: { type: "string" } },
                       correctIndex: { type: "number" },
+                      explanation: { type: "string" },
                     },
-                    required: ["label", "question", "options", "correctIndex"],
+                    required: ["label", "question", "options", "correctIndex", "explanation"],
                     additionalProperties: false,
                   },
                 },
