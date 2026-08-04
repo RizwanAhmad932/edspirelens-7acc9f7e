@@ -443,15 +443,23 @@ Style: textbook-quality educational infographic, clean layout, professional, sui
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert ${examLabel} exam analyst. You write Previous Year Question (PYQ)-style questions in the EXACT style, format, marking scheme, and difficulty of past ${examLabel} exams. Tag each question with a plausible exam year (last 10 years).` },
-          { role: "user", content: `Generate 12-15 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
+          { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
+
+RULES:
+- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Very Short / Short / Long / Numerical / Assertion-Reason / Case-Based).
+- Model answers must be marking-scheme accurate: for an N-mark question give roughly N key scoring points, with formulas and units where relevant.
+- Stay strictly inside the chapter scope shown in the transcript. Never drift into other chapters.
+- Prioritise the highest-weightage, most repeated question patterns for this chapter.` },
+          { role: "user", content: `Generate 18-22 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
 Mix of:
 - 1-mark MCQs / very short answer
 - 2-mark short answer
 - 3-mark questions
 - 5-mark long answer
+- Assertion-Reason / Case-based where the exam uses them
 
-For each question include: year (e.g. "2023"), marks, question text, and a brief model answer / answer hint.
+For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a marking-scheme style model answer.
+Order the questions from lowest marks to highest.
 
 Reference video transcript (do not deviate from chapter scope):
 ${(transcriptText || "").substring(0, 8000)}` }
@@ -474,8 +482,10 @@ ${(transcriptText || "").substring(0, 8000)}` }
                       marks: { type: "number" },
                       question: { type: "string" },
                       answer: { type: "string" },
+                      type: { type: "string" },
+                      topic: { type: "string" },
                     },
-                    required: ["year", "marks", "question", "answer"],
+                    required: ["year", "marks", "question", "answer", "type", "topic"],
                     additionalProperties: false,
                   },
                 },
@@ -504,13 +514,20 @@ ${(transcriptText || "").substring(0, 8000)}` }
       const fcResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "Generate study flashcards ONLY from the specific topics the teacher covers in this video. Do NOT include flashcards about NCERT content from chapters or sections not discussed in the video." },
+          { role: "system", content: `You are a spaced-repetition flashcard author. Generate study flashcards ONLY from the specific topics the teacher covers in this video. Do NOT include content from chapters or sections not discussed in the video.
+
+CARD QUALITY RULES:
+- One single fact, formula, definition or step per card — never bundle multiple ideas.
+- "front" is a precise question or cue (under 120 chars). "back" is a crisp, complete, self-contained answer (1-3 sentences, include units/notation).
+- Include formula cards written exactly as the teacher stated them.
+- Add a short "hint" (a nudge, not the answer), the sub-topic, and a difficulty rating for every card.
+- No trivia, no "what did the teacher say" style cards.` },
           {
             role: "user",
-            content: `Generate 10-20 study flashcards STRICTLY from this video transcript. Each card should have a "front" (question/term) and "back" (answer/definition). Only cover concepts, formulas, and facts the teacher actually discusses — no unrelated NCERT content.
+            content: `Generate 20-30 study flashcards STRICTLY from this video transcript, covering the video evenly from start to end. Each card: "front" (question/term), "back" (answer/definition), "hint", "topic", "difficulty" ("easy"|"medium"|"hard"). Only cover concepts, formulas, and facts the teacher actually discusses.
 
 Transcript:
-${transcriptText.substring(0, 10000)}`,
+${transcriptText.substring(0, 20000)}`,
           },
         ],
         [{
@@ -521,7 +538,7 @@ ${transcriptText.substring(0, 10000)}`,
             parameters: {
               type: "object",
               properties: {
-                flashcards: { type: "array", items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } },
+                flashcards: { type: "array", items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" }, hint: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] } }, required: ["front", "back", "hint", "topic", "difficulty"], additionalProperties: false } },
               },
               required: ["flashcards"],
               additionalProperties: false,
