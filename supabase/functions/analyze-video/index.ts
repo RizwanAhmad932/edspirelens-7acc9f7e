@@ -410,18 +410,20 @@ ${transcriptText.substring(0, 35000)}`,
       const { chapterTitle, summary } = body;
       if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const prompt = `Create a visually rich, colorful educational INFOGRAPHIC poster for the chapter "${chapterTitle}".
-Include:
-- Bold chapter title at the top
-- 5-7 key concept boxes with short labels and icons
-- Clean diagrams, arrows, and color-coded sections
-- Modern flat illustration style, vibrant colors, white background
-- Text should be CRISP and READABLE
+      const prompt = `Create a print-quality educational INFOGRAPHIC poster (portrait, A4 proportions) for the chapter "${chapterTitle}".
 
-Key topics to cover:
-${(summary || []).slice(0, 10).join("\n- ")}
+Layout requirements:
+- Bold chapter title banner at the top with a thin subtitle line
+- 6-8 clearly separated concept blocks arranged on a clean grid, each with a short heading, 1-2 short bullet lines and a simple flat icon
+- A dedicated highlighted box for key formulas / definitions, written in crisp typography
+- Flow arrows connecting related concepts, and a colour-coded legend
+- Every word must be spelled correctly and be perfectly legible; no gibberish or fake text
+- Modern flat vector illustration style, vibrant but harmonious palette, generous white space, white background
 
-Style: textbook-quality educational infographic, clean layout, professional, suitable for students.`;
+Content to visualise (do not add topics outside this list):
+- ${(summary || []).slice(0, 10).join("\n- ")}
+
+Style: textbook-quality educational revision poster, professional, exam-focused, suitable for school and competitive-exam students.`;
 
       const imgResp = await aiImageCall(LOVABLE_API_KEY, prompt);
       if (!imgResp.ok) {
