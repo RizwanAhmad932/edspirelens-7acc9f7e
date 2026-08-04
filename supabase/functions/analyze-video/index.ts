@@ -343,15 +343,24 @@ Return:
       // Scale question count by transcript length (rough proxy for video length)
       // ~150 words/min: 30k chars ≈ 1hr. Min 20, max 50.
       const len = transcriptText.length;
-      let targetCount = 20;
-      if (len > 8000) targetCount = 30;
-      if (len > 18000) targetCount = 40;
-      if (len > 30000) targetCount = 50;
+      let targetCount = 25;
+      if (len > 8000) targetCount = 35;
+      if (len > 18000) targetCount = 45;
+      if (len > 30000) targetCount = 60;
 
       const quizResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an exam quiz generator. Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video. Do NOT add questions from unrelated NCERT chapters or sections not covered in the video. Cover the full breadth of the video — beginning to end.` },
+          { role: "system", content: `You are a rigorous exam quiz setter (CBSE/ICSE/NEET/JEE standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
+
+ACCURACY RULES (non-negotiable):
+- Every question must be answerable from the transcript content alone; never invent facts.
+- Exactly ONE option must be unambiguously correct; the other 3 must be plausible but clearly wrong distractors of similar length and style.
+- Never use "All of the above" / "None of the above" unless the teacher used it.
+- Verify each answer against the transcript before returning it. If unsure of the answer, drop the question and write a different one.
+- Spread questions evenly across the whole video (start → middle → end), not just the first minutes.
+- Difficulty mix: ~40% easy (recall), ~40% medium (understanding/application), ~20% hard (HOTS/numerical).
+- For every question also return: a 1-2 sentence explanation of WHY the correct option is right, the sub-topic name, the difficulty, and the transcript timestamp (M:SS) where it was taught.` },
           {
             role: "user",
             content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
@@ -362,6 +371,7 @@ Return:
 
 Do NOT create questions about NCERT topics not discussed by the teacher.
 Each question should have 4 options with exactly one correct answer.
+Also return explanation, topic, difficulty ("easy"|"medium"|"hard") and timestamp for each question.
 Return EXACTLY ${targetCount} questions — no more, no less.
 
 Transcript:
@@ -376,7 +386,7 @@ ${transcriptText.substring(0, 35000)}`,
             parameters: {
               type: "object",
               properties: {
-                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" } }, required: ["id", "question", "options", "correctIndex"], additionalProperties: false } },
+                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" }, explanation: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] }, timestamp: { type: "string" } }, required: ["id", "question", "options", "correctIndex", "explanation", "topic", "difficulty", "timestamp"], additionalProperties: false } },
               },
               required: ["questions"],
               additionalProperties: false,
