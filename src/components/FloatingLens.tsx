@@ -147,8 +147,8 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="notes"><NotesPanel notes={notes} transcript={transcript} /></TabsContent>
-                <TabsContent value="summary"><SummaryPanel summary={summary} /></TabsContent>
+                <TabsContent value="notes"><NotesPanel notes={notes} transcript={transcript} chapterTitle={videoTitle} /></TabsContent>
+                <TabsContent value="summary"><SummaryPanel summary={summary} chapterTitle={videoTitle} /></TabsContent>
                 <TabsContent value="search"><TopicSearch transcript={transcript} /></TabsContent>
                 <TabsContent value="quiz">
                   {quizLoading ? (
@@ -245,8 +245,8 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="notes"><NotesPanel notes={notes} transcript={transcript} /></TabsContent>
-              <TabsContent value="summary"><SummaryPanel summary={summary} /></TabsContent>
+              <TabsContent value="notes"><NotesPanel notes={notes} transcript={transcript} chapterTitle={videoTitle} /></TabsContent>
+              <TabsContent value="summary"><SummaryPanel summary={summary} chapterTitle={videoTitle} /></TabsContent>
               <TabsContent value="search"><TopicSearch transcript={transcript} /></TabsContent>
               <TabsContent value="quiz">
                 {quizLoading ? (
