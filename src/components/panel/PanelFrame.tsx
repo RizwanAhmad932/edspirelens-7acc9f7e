@@ -1,0 +1,95 @@
+import { ReactNode } from "react";
+import { Download, FileText, FileDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportDocMarkdown, exportDocPdf, DocSection } from "@/lib/exportDoc";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+/** Futuristic HUD header used across every study-tool panel. */
+export const PanelHeader = ({
+  label,
+  icon,
+  meta,
+  actions,
+}: {
+  label: string;
+  icon?: ReactNode;
+  meta?: ReactNode;
+  actions?: ReactNode;
+}) => (
+  <div className="flex items-center justify-between gap-2 pb-2 mb-1 border-b border-foreground/10">
+    <div className="flex items-center gap-2 min-w-0">
+      {icon && <span className="text-accent shrink-0">{icon}</span>}
+      <h3 className="hud-label truncate">{label}</h3>
+      {meta && <span className="text-[10px] font-mono-hud text-muted-foreground shrink-0">{meta}</span>}
+    </div>
+    <div className="flex items-center gap-1 shrink-0">{actions}</div>
+  </div>
+);
+
+/** Download control: PDF (print dialog) or Markdown file. */
+export const ExportButton = ({
+  title,
+  subtitle,
+  sections,
+  compact = true,
+  disabled,
+}: {
+  title: string;
+  subtitle?: string;
+  sections: DocSection[];
+  compact?: boolean;
+  disabled?: boolean;
+}) => {
+  const hasContent = sections.some((s) => s.items?.length);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={disabled || !hasContent}>
+        <button
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent/10 text-accent",
+            "font-mono-hud uppercase tracking-[0.14em] transition-colors hover:bg-accent/20",
+            "disabled:opacity-40 disabled:pointer-events-none",
+            compact ? "text-[9px] px-2 py-1" : "text-[10px] px-3 py-1.5",
+          )}
+        >
+          <Download className="h-3 w-3" /> Save
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[170px]">
+        <DropdownMenuItem
+          className="text-xs gap-2"
+          onClick={() => {
+            exportDocPdf({ title, subtitle, sections });
+          }}
+        >
+          <FileText className="h-3.5 w-3.5" /> Download as PDF
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-xs gap-2"
+          onClick={() => {
+            exportDocMarkdown({ title, subtitle, sections });
+            toast.success("Notes downloaded");
+          }}
+        >
+          <FileDown className="h-3.5 w-3.5" /> Download as Markdown
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+/** Neon progress rail used by quiz-style panels. */
+export const HudProgress = ({ value }: { value: number }) => (
+  <div className="h-1 w-full rounded-full bg-foreground/10 overflow-hidden">
+    <div
+      className="h-full rounded-full gradient-primary transition-all duration-500"
+      style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+    />
+  </div>
+);

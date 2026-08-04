@@ -343,15 +343,24 @@ Return:
       // Scale question count by transcript length (rough proxy for video length)
       // ~150 words/min: 30k chars ≈ 1hr. Min 20, max 50.
       const len = transcriptText.length;
-      let targetCount = 20;
-      if (len > 8000) targetCount = 30;
-      if (len > 18000) targetCount = 40;
-      if (len > 30000) targetCount = 50;
+      let targetCount = 25;
+      if (len > 8000) targetCount = 35;
+      if (len > 18000) targetCount = 45;
+      if (len > 30000) targetCount = 60;
 
       const quizResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an exam quiz generator. Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video. Do NOT add questions from unrelated NCERT chapters or sections not covered in the video. Cover the full breadth of the video — beginning to end.` },
+          { role: "system", content: `You are a rigorous exam quiz setter (CBSE/ICSE/NEET/JEE standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
+
+ACCURACY RULES (non-negotiable):
+- Every question must be answerable from the transcript content alone; never invent facts.
+- Exactly ONE option must be unambiguously correct; the other 3 must be plausible but clearly wrong distractors of similar length and style.
+- Never use "All of the above" / "None of the above" unless the teacher used it.
+- Verify each answer against the transcript before returning it. If unsure of the answer, drop the question and write a different one.
+- Spread questions evenly across the whole video (start → middle → end), not just the first minutes.
+- Difficulty mix: ~40% easy (recall), ~40% medium (understanding/application), ~20% hard (HOTS/numerical).
+- For every question also return: a 1-2 sentence explanation of WHY the correct option is right, the sub-topic name, the difficulty, and the transcript timestamp (M:SS) where it was taught.` },
           {
             role: "user",
             content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
@@ -362,6 +371,7 @@ Return:
 
 Do NOT create questions about NCERT topics not discussed by the teacher.
 Each question should have 4 options with exactly one correct answer.
+Also return explanation, topic, difficulty ("easy"|"medium"|"hard") and timestamp for each question.
 Return EXACTLY ${targetCount} questions — no more, no less.
 
 Transcript:
@@ -376,7 +386,7 @@ ${transcriptText.substring(0, 35000)}`,
             parameters: {
               type: "object",
               properties: {
-                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" } }, required: ["id", "question", "options", "correctIndex"], additionalProperties: false } },
+                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" }, explanation: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] }, timestamp: { type: "string" } }, required: ["id", "question", "options", "correctIndex", "explanation", "topic", "difficulty", "timestamp"], additionalProperties: false } },
               },
               required: ["questions"],
               additionalProperties: false,
@@ -400,18 +410,20 @@ ${transcriptText.substring(0, 35000)}`,
       const { chapterTitle, summary } = body;
       if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const prompt = `Create a visually rich, colorful educational INFOGRAPHIC poster for the chapter "${chapterTitle}".
-Include:
-- Bold chapter title at the top
-- 5-7 key concept boxes with short labels and icons
-- Clean diagrams, arrows, and color-coded sections
-- Modern flat illustration style, vibrant colors, white background
-- Text should be CRISP and READABLE
+      const prompt = `Create a print-quality educational INFOGRAPHIC poster (portrait, A4 proportions) for the chapter "${chapterTitle}".
 
-Key topics to cover:
-${(summary || []).slice(0, 10).join("\n- ")}
+Layout requirements:
+- Bold chapter title banner at the top with a thin subtitle line
+- 6-8 clearly separated concept blocks arranged on a clean grid, each with a short heading, 1-2 short bullet lines and a simple flat icon
+- A dedicated highlighted box for key formulas / definitions, written in crisp typography
+- Flow arrows connecting related concepts, and a colour-coded legend
+- Every word must be spelled correctly and be perfectly legible; no gibberish or fake text
+- Modern flat vector illustration style, vibrant but harmonious palette, generous white space, white background
 
-Style: textbook-quality educational infographic, clean layout, professional, suitable for students.`;
+Content to visualise (do not add topics outside this list):
+- ${(summary || []).slice(0, 10).join("\n- ")}
+
+Style: textbook-quality educational revision poster, professional, exam-focused, suitable for school and competitive-exam students.`;
 
       const imgResp = await aiImageCall(LOVABLE_API_KEY, prompt);
       if (!imgResp.ok) {
@@ -433,15 +445,23 @@ Style: textbook-quality educational infographic, clean layout, professional, sui
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert ${examLabel} exam analyst. You write Previous Year Question (PYQ)-style questions in the EXACT style, format, marking scheme, and difficulty of past ${examLabel} exams. Tag each question with a plausible exam year (last 10 years).` },
-          { role: "user", content: `Generate 12-15 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
+          { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
+
+RULES:
+- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Very Short / Short / Long / Numerical / Assertion-Reason / Case-Based).
+- Model answers must be marking-scheme accurate: for an N-mark question give roughly N key scoring points, with formulas and units where relevant.
+- Stay strictly inside the chapter scope shown in the transcript. Never drift into other chapters.
+- Prioritise the highest-weightage, most repeated question patterns for this chapter.` },
+          { role: "user", content: `Generate 18-22 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
 Mix of:
 - 1-mark MCQs / very short answer
 - 2-mark short answer
 - 3-mark questions
 - 5-mark long answer
+- Assertion-Reason / Case-based where the exam uses them
 
-For each question include: year (e.g. "2023"), marks, question text, and a brief model answer / answer hint.
+For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a marking-scheme style model answer.
+Order the questions from lowest marks to highest.
 
 Reference video transcript (do not deviate from chapter scope):
 ${(transcriptText || "").substring(0, 8000)}` }
@@ -464,8 +484,10 @@ ${(transcriptText || "").substring(0, 8000)}` }
                       marks: { type: "number" },
                       question: { type: "string" },
                       answer: { type: "string" },
+                      type: { type: "string" },
+                      topic: { type: "string" },
                     },
-                    required: ["year", "marks", "question", "answer"],
+                    required: ["year", "marks", "question", "answer", "type", "topic"],
                     additionalProperties: false,
                   },
                 },
@@ -494,13 +516,20 @@ ${(transcriptText || "").substring(0, 8000)}` }
       const fcResponse = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "Generate study flashcards ONLY from the specific topics the teacher covers in this video. Do NOT include flashcards about NCERT content from chapters or sections not discussed in the video." },
+          { role: "system", content: `You are a spaced-repetition flashcard author. Generate study flashcards ONLY from the specific topics the teacher covers in this video. Do NOT include content from chapters or sections not discussed in the video.
+
+CARD QUALITY RULES:
+- One single fact, formula, definition or step per card — never bundle multiple ideas.
+- "front" is a precise question or cue (under 120 chars). "back" is a crisp, complete, self-contained answer (1-3 sentences, include units/notation).
+- Include formula cards written exactly as the teacher stated them.
+- Add a short "hint" (a nudge, not the answer), the sub-topic, and a difficulty rating for every card.
+- No trivia, no "what did the teacher say" style cards.` },
           {
             role: "user",
-            content: `Generate 10-20 study flashcards STRICTLY from this video transcript. Each card should have a "front" (question/term) and "back" (answer/definition). Only cover concepts, formulas, and facts the teacher actually discusses — no unrelated NCERT content.
+            content: `Generate 20-30 study flashcards STRICTLY from this video transcript, covering the video evenly from start to end. Each card: "front" (question/term), "back" (answer/definition), "hint", "topic", "difficulty" ("easy"|"medium"|"hard"). Only cover concepts, formulas, and facts the teacher actually discusses.
 
 Transcript:
-${transcriptText.substring(0, 10000)}`,
+${transcriptText.substring(0, 20000)}`,
           },
         ],
         [{
@@ -511,7 +540,7 @@ ${transcriptText.substring(0, 10000)}`,
             parameters: {
               type: "object",
               properties: {
-                flashcards: { type: "array", items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"], additionalProperties: false } },
+                flashcards: { type: "array", items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" }, hint: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] } }, required: ["front", "back", "hint", "topic", "difficulty"], additionalProperties: false } },
               },
               required: ["flashcards"],
               additionalProperties: false,
@@ -620,8 +649,15 @@ ${transcriptText || "No transcript available."}`,
       const snResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: "You write ultra-concise exam revision cheat sheets. Output crisp 1-line bullets that a student can revise in under 5 minutes. Highlight formulas, key terms, and must-remember facts." },
-          { role: "user", content: `Create SHORT NOTES cheat-sheet for "${chapterTitle}".\n\nTranscript:\n${transcriptText.substring(0, 15000)}` }
+          { role: "system", content: `You write ultra-concise, exam-accurate revision cheat sheets.
+
+RULES:
+- 12-18 crisp one-line key points, ordered exactly as taught in the video. No filler, no "the teacher explained...".
+- Every formula the teacher used, written in clean plain-text notation with the meaning of each symbol and its unit.
+- 6-10 key terms with one-line, textbook-precise definitions.
+- 2-4 memory mnemonics/tricks and 3-5 common mistakes students make in exams on this topic.
+- Only use content actually present in the transcript. Never invent formulas.` },
+          { role: "user", content: `Create a SHORT NOTES revision cheat-sheet for "${chapterTitle}" that a student can revise in under 5 minutes before an exam. Include keyPoints, formulas, keyTerms, mnemonics, commonMistakes and one rememberTip.\n\nTranscript:\n${transcriptText.substring(0, 20000)}` }
         ],
         [{
           type: "function",
@@ -635,9 +671,11 @@ ${transcriptText || "No transcript available."}`,
                 keyPoints: { type: "array", items: { type: "string" } },
                 formulas: { type: "array", items: { type: "string" } },
                 keyTerms: { type: "array", items: { type: "object", properties: { term: { type: "string" }, definition: { type: "string" } }, required: ["term", "definition"], additionalProperties: false } },
+                mnemonics: { type: "array", items: { type: "string" } },
+                commonMistakes: { type: "array", items: { type: "string" } },
                 rememberTip: { type: "string" },
               },
-              required: ["title", "keyPoints", "formulas", "keyTerms", "rememberTip"],
+              required: ["title", "keyPoints", "formulas", "keyTerms", "mnemonics", "commonMistakes", "rememberTip"],
               additionalProperties: false,
             },
           },
@@ -674,8 +712,8 @@ ${transcriptText || "No transcript available."}`,
       const qResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You write diagram-based labeling MCQs in the style of ${examLabel} exams.` },
-          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E in the format: "What is the part labeled X in the diagram?" with 4 plausible options.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
+          { role: "system", content: `You write diagram-based labeling MCQs in the exact style of ${examLabel} exams. Exactly one option is correct, the other three are anatomically/scientifically plausible distractors from the same diagram family. Add a one-line explanation of the correct part's function or identity.` },
+          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E, e.g. "The part labeled A in the diagram is:" with 4 plausible options and an explanation.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
         ],
         [{
           type: "function",
@@ -694,8 +732,9 @@ ${transcriptText || "No transcript available."}`,
                       question: { type: "string" },
                       options: { type: "array", items: { type: "string" } },
                       correctIndex: { type: "number" },
+                      explanation: { type: "string" },
                     },
-                    required: ["label", "question", "options", "correctIndex"],
+                    required: ["label", "question", "options", "correctIndex", "explanation"],
                     additionalProperties: false,
                   },
                 },

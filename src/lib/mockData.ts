@@ -25,11 +25,18 @@ export interface QuizQuestion {
   question: string;
   options: string[];
   correctIndex: number;
+  explanation?: string;
+  difficulty?: "easy" | "medium" | "hard" | string;
+  topic?: string;
+  timestamp?: string;
 }
 
 export interface Flashcard {
   front: string;
   back: string;
+  hint?: string;
+  topic?: string;
+  difficulty?: "easy" | "medium" | "hard" | string;
 }
 
 export interface PYQQuestion {
@@ -37,6 +44,8 @@ export interface PYQQuestion {
   marks: number;
   question: string;
   answer: string;
+  topic?: string;
+  type?: string;
 }
 
 export interface TeacherNoteBlock {
@@ -53,6 +62,8 @@ export interface ShortNotes {
   formulas: string[];
   keyTerms: { term: string; definition: string }[];
   rememberTip: string;
+  mnemonics?: string[];
+  commonMistakes?: string[];
 }
 
 export interface DiagramQuizQuestion {
@@ -60,6 +71,7 @@ export interface DiagramQuizQuestion {
   question: string;
   options: string[];
   correctIndex: number;
+  explanation?: string;
 }
 
 export interface DiagramQuiz {
