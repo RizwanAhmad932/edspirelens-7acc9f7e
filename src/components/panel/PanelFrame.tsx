@@ -22,11 +22,20 @@ export const PanelHeader = ({
   meta?: ReactNode;
   actions?: ReactNode;
 }) => (
-  <div className="flex items-center justify-between gap-2 pb-2 mb-1 border-b border-foreground/10">
+  <div className="relative flex items-center justify-between gap-2 pb-2 mb-1 border-b border-foreground/10">
+    <span className="pointer-events-none absolute -bottom-px left-0 h-px w-24 bg-gradient-to-r from-accent/80 to-transparent" />
     <div className="flex items-center gap-2 min-w-0">
-      {icon && <span className="text-accent shrink-0">{icon}</span>}
+      {icon && (
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg border border-accent/25 bg-accent/10 text-accent">
+          {icon}
+        </span>
+      )}
       <h3 className="hud-label truncate">{label}</h3>
-      {meta && <span className="text-[10px] font-mono-hud text-muted-foreground shrink-0">{meta}</span>}
+      {meta && (
+        <span className="shrink-0 rounded-full border border-foreground/10 bg-secondary/50 px-1.5 py-0.5 text-[10px] font-mono-hud text-muted-foreground">
+          {meta}
+        </span>
+      )}
     </div>
     <div className="flex items-center gap-1 shrink-0">{actions}</div>
   </div>
