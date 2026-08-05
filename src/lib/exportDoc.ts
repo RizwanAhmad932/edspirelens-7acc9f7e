@@ -59,91 +59,194 @@ function renderSection(s: DocSection): string {
   }
 }
 
-/** Real .pdf file download using jsPDF (no popup / print dialog needed). */
+/**
+ * Clean the text of glyphs the jsPDF standard (WinAnsi) fonts can't render,
+ * which is what produced garbled / clipped output before.
+ */
+const clean = (s: unknown) =>
+  String(s ?? "")
+    .replace(/[\u2018\u2019\u201B]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u00A0\u202F]/g, " ")
+    .replace(/[\u2022\u25CF]/g, "-")
+    .replace(/[^\x09\x0A\x20-\x7E\u00A1-\u00FF]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+/** Real .pdf file download using jsPDF — A4, safe margins, никогда not clipped. */
 export async function exportDocPdf(opts: {
   title: string;
   subtitle?: string;
   sections: DocSection[];
 }) {
   const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const M = 48;
-  const maxW = pageW - M * 2;
-  let y = M;
 
-  const newPageIfNeeded = (h: number) => {
-    if (y + h > pageH - M) {
-      doc.addPage();
-      y = M;
-    }
+  const ML = 54; // left margin
+  const MR = 54; // right margin
+  const MT = 64; // top margin (content starts below running header)
+  const MB = 56; // bottom margin (footer lives below)
+  const contentW = pageW - ML - MR;
+
+  let y = MT;
+  let pageIndex = 1;
+
+  const ACCENT: [number, number, number] = [79, 70, 229];
+  const INK: [number, number, number] = [24, 24, 32];
+  const MUTED: [number, number, number] = [110, 112, 130];
+
+  /** Hard-break tokens longer than the available width so nothing bleeds off-page. */
+  const breakLongWords = (text: string, width: number) =>
+    text
+      .split(/\s+/)
+      .map((word) => {
+        if (doc.getTextWidth(word) <= width) return word;
+        let out = "";
+        let cur = "";
+        for (const ch of word) {
+          if (doc.getTextWidth(cur + ch) > width && cur) {
+            out += cur + "\u200B ";
+            cur = "";
+          }
+          cur += ch;
+        }
+        return out + cur;
+      })
+      .join(" ");
+
+  const drawChrome = () => {
+    // top hairline + brand
+    doc.setDrawColor(226, 227, 236);
+    doc.setLineWidth(0.6);
+    doc.line(ML, 40, pageW - MR, 40);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...ACCENT);
+    doc.text("EDSPIRE LENS", ML, 33);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MUTED);
+    doc.text(clean(opts.title).slice(0, 62), pageW - MR, 33, { align: "right" });
+    // footer
+    doc.setDrawColor(238, 239, 246);
+    doc.line(ML, pageH - 40, pageW - MR, pageH - 40);
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text(new Date().toLocaleDateString(), ML, pageH - 26);
+    doc.text(`Page ${pageIndex}`, pageW - MR, pageH - 26, { align: "right" });
   };
 
-  const write = (
-    text: string,
-    { size = 11, style = "normal", indent = 0, gap = 5, color = [17, 17, 17] as number[] } = {},
-  ) => {
-    doc.setFont("helvetica", style);
+  const addPage = () => {
+    doc.addPage();
+    pageIndex += 1;
+    drawChrome();
+    y = MT;
+  };
+
+  const room = (h: number) => {
+    if (y + h > pageH - MB) addPage();
+  };
+
+  type WOpts = {
+    size?: number;
+    style?: "normal" | "bold" | "italic";
+    font?: "helvetica" | "courier";
+    indent?: number;
+    hanging?: number;
+    gapAfter?: number;
+    color?: [number, number, number];
+    lead?: number;
+  };
+
+  /** Measure + draw wrapped text, honouring indent and hanging indent. */
+  const write = (text: string, o: WOpts = {}) => {
+    const {
+      size = 10.5,
+      style = "normal",
+      font = "helvetica",
+      indent = 0,
+      hanging = 0,
+      gapAfter = 6,
+      color = INK,
+      lead = 1.45,
+    } = o;
+    const body = clean(text);
+    if (!body) return;
+    doc.setFont(font, style);
     doc.setFontSize(size);
-    doc.setTextColor(color[0], color[1], color[2]);
-    const lines = doc.splitTextToSize(String(text ?? ""), maxW - indent);
-    for (const line of lines) {
-      newPageIfNeeded(size + gap);
-      doc.text(line, M + indent, y);
-      y += size + gap - 2;
-    }
-    y += gap;
+    doc.setTextColor(...color);
+
+    const firstW = contentW - indent;
+    const restW = contentW - indent - hanging;
+    const lineH = size * lead;
+
+    // wrap against the narrower width so the hanging lines never overflow
+    const lines: string[] = doc.splitTextToSize(breakLongWords(body, restW), restW);
+    lines.forEach((line, i) => {
+      room(lineH);
+      const x = ML + indent + (i === 0 ? 0 : hanging);
+      doc.text(line.replace(/\u200B/g, ""), x, y + size * 0.85, {
+        maxWidth: i === 0 ? firstW : restW,
+      });
+      y += lineH;
+    });
+    y += gapAfter;
   };
 
-  // Header
-  write(opts.title, { size: 18, style: "bold", gap: 4 });
-  if (opts.subtitle) write(opts.subtitle, { size: 10, color: [110, 110, 110], gap: 6 });
-  doc.setDrawColor(20, 20, 20);
-  doc.line(M, y, pageW - M, y);
+  const sectionHeading = (label: string) => {
+    room(46);
+    y += 4;
+    doc.setFillColor(...ACCENT);
+    doc.rect(ML, y + 1, 3, 12, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...ACCENT);
+    doc.text(clean(label).toUpperCase(), ML + 10, y + 10.5, { maxWidth: contentW - 10 });
+    y += 22;
+  };
+
+  // ---- Cover header -------------------------------------------------------
+  drawChrome();
+  doc.setFillColor(244, 245, 252);
+  doc.roundedRect(ML, y - 6, contentW, 0.1, 6, 6, "F");
+  write(opts.title, { size: 19, style: "bold", gapAfter: 2, lead: 1.25 });
+  if (opts.subtitle) write(opts.subtitle, { size: 9.5, color: MUTED, gapAfter: 8 });
+  doc.setDrawColor(...ACCENT);
+  doc.setLineWidth(1.2);
+  doc.line(ML, y, ML + 70, y);
   y += 18;
 
+  // ---- Body ---------------------------------------------------------------
   for (const s of opts.sections) {
     if (!s.items?.length) continue;
-    newPageIfNeeded(40);
-    write(s.heading.toUpperCase(), { size: 12, style: "bold", gap: 8 });
+    sectionHeading(s.heading);
 
     if (s.type === "list") {
-      s.items.forEach((i) => write(`•  ${i}`, { indent: 8 }));
+      s.items.forEach((i) => write(`-  ${i}`, { indent: 6, hanging: 12, gapAfter: 4 }));
     } else if (s.type === "text") {
-      s.items.forEach((i) => write(i));
+      s.items.forEach((i) => write(i, { gapAfter: 7 }));
     } else if (s.type === "formula") {
-      s.items.forEach((i) => {
-        doc.setFont("courier", "normal");
-        write(i, { size: 11, indent: 8 });
-      });
+      s.items.forEach((i) =>
+        write(i, { font: "courier", size: 10, indent: 8, hanging: 8, gapAfter: 6, color: [40, 40, 90] }),
+      );
     } else if (s.type === "kv") {
       s.items.forEach((t) => {
-        write(t.term, { size: 11, style: "bold", gap: 2 });
-        write(t.definition, { size: 11, indent: 8 });
+        write(t.term, { size: 10.5, style: "bold", gapAfter: 1 });
+        write(t.definition, { indent: 10, gapAfter: 8, color: [55, 60, 78] });
       });
     } else if (s.type === "qa") {
       s.items.forEach((q, i) => {
-        if (q.meta) write(q.meta, { size: 9, color: [90, 90, 140], gap: 2 });
-        write(`${i + 1}. ${q.question}`, { size: 11, style: "bold", gap: 3 });
-        if (q.answer) write(`Ans. ${q.answer}`, { size: 11, indent: 10, color: [55, 65, 81] });
+        room(48);
+        if (q.meta) write(q.meta, { size: 8, color: [120, 110, 190], gapAfter: 1 });
+        write(`${i + 1}.  ${q.question}`, { style: "bold", hanging: 16, gapAfter: 2 });
+        if (q.answer)
+          write(`Ans.  ${q.answer}`, { indent: 16, hanging: 22, gapAfter: 9, color: [60, 68, 88] });
       });
     }
-    y += 6;
-  }
-
-  const pages = doc.getNumberOfPages();
-  for (let p = 1; p <= pages; p++) {
-    doc.setPage(p);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    doc.text(
-      `Generated by Edspire Lens · ${new Date().toLocaleDateString()}  ·  ${p}/${pages}`,
-      pageW / 2,
-      pageH - 22,
-      { align: "center" },
-    );
+    y += 4;
   }
 
   doc.save(`${safeName(opts.title)}.pdf`);
