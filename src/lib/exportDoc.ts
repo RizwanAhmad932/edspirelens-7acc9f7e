@@ -75,7 +75,7 @@ const clean = (s: unknown) =>
     .replace(/[ \t]+/g, " ")
     .trim();
 
-/** Real .pdf file download using jsPDF — A4, safe margins, никогда not clipped. */
+/** Real .pdf file download using jsPDF — A4 with safe margins; text is never clipped. */
 export async function exportDocPdf(opts: {
   title: string;
   subtitle?: string;
@@ -179,7 +179,6 @@ export async function exportDocPdf(opts: {
     doc.setFontSize(size);
     doc.setTextColor(...color);
 
-    const firstW = contentW - indent;
     const restW = contentW - indent - hanging;
     const lineH = size * lead;
 
@@ -188,9 +187,7 @@ export async function exportDocPdf(opts: {
     lines.forEach((line, i) => {
       room(lineH);
       const x = ML + indent + (i === 0 ? 0 : hanging);
-      doc.text(line.replace(/\u200B/g, ""), x, y + size * 0.85, {
-        maxWidth: i === 0 ? firstW : restW,
-      });
+      doc.text(line.replace(/\u200B/g, ""), x, y + size * 0.85);
       y += lineH;
     });
     y += gapAfter;
