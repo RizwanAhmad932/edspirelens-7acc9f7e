@@ -64,8 +64,13 @@ export const ExportButton = ({
       <DropdownMenuContent align="end" className="min-w-[170px]">
         <DropdownMenuItem
           className="text-xs gap-2"
-          onClick={() => {
-            exportDocPdf({ title, subtitle, sections });
+          onClick={async () => {
+            try {
+              await exportDocPdf({ title, subtitle, sections });
+              toast.success("PDF downloaded");
+            } catch (e) {
+              toast.error("Could not create PDF");
+            }
           }}
         >
           <FileText className="h-3.5 w-3.5" /> Download as PDF
