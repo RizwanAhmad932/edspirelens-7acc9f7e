@@ -120,7 +120,7 @@ async function getVideoTitle(videoId: string): Promise<string> {
 }
 
 function aiCall(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
-  const body: any = { model: "google/gemini-3-flash-preview", messages };
+  const body: any = { model: "google/gemini-3.6-flash", messages };
   if (tools) body.tools = tools;
   if (toolChoice) body.tool_choice = toolChoice;
   return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
