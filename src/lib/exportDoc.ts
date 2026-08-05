@@ -185,7 +185,14 @@ export async function exportDocPdf(opts: {
     // wrap against the narrower width so the hanging lines never overflow
     const lines: string[] = doc.splitTextToSize(breakLongWords(body, restW), restW);
     lines.forEach((line, i) => {
+      const before = pageIndex;
       room(lineH);
+      if (pageIndex !== before) {
+        // a page break resets the graphics state — restore this run's styling
+        doc.setFont(font, style);
+        doc.setFontSize(size);
+        doc.setTextColor(...color);
+      }
       const x = ML + indent + (i === 0 ? 0 : hanging);
       doc.text(line.replace(/\u200B/g, ""), x, y + size * 0.85);
       y += lineH;
