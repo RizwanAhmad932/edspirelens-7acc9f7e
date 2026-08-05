@@ -52,8 +52,8 @@ export const ExportButton = ({
       <DropdownMenuTrigger asChild disabled={disabled || !hasContent}>
         <button
           className={cn(
-            "inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent/10 text-accent",
-            "font-mono-hud uppercase tracking-[0.14em] transition-colors hover:bg-accent/20",
+            "inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/12 text-accent",
+            "font-mono-hud uppercase tracking-[0.14em] transition-all hover:bg-accent/25 hover:shadow-[0_0_14px_-2px_hsl(var(--accent)/0.6)] active:scale-95",
             "disabled:opacity-40 disabled:pointer-events-none",
             compact ? "text-[9px] px-2 py-1" : "text-[10px] px-3 py-1.5",
           )}
