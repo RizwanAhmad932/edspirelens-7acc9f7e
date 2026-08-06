@@ -162,8 +162,87 @@ async function aiCall(
   return resp;
 }
 
-const aiCallDeep = (apiKey: string, messages: any[], tools?: any[], toolChoice?: any) =>
-  aiCall(apiKey, messages, tools, toolChoice, "deep");
+/**
+ * Deep tier — OpenAI reasoning model over the gateway Responses API (streamed,
+ * as required for reasoning models). Returns a chat-completions-shaped result
+ * so callers can keep using parseToolResponse(). Falls back to the fast model
+ * on any upstream failure so a student never sees a dead panel.
+ */
+async function aiCallDeep(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
+  try {
+    const input = messages.map((m) => ({
+      role: m.role === "system" ? "developer" : m.role,
+      content: [{ type: "input_text", text: String(m.content ?? "") }],
+    }));
+    const rTools = (tools || []).map((t) => ({
+      type: "function",
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+      strict: false,
+    }));
+    const rChoice = toolChoice?.function?.name
+      ? { type: "function", name: toolChoice.function.name }
+      : undefined;
+
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODELS.deep,
+        stream: true,
+        store: false,
+        reasoning: { effort: "low" },
+        input,
+        ...(rTools.length ? { tools: rTools } : {}),
+        ...(rChoice ? { tool_choice: rChoice } : {}),
+      }),
+    });
+    if (!resp.ok || !resp.body) throw new Error(`responses ${resp.status}`);
+
+    let args = "";
+    let text = "";
+    let name = toolChoice?.function?.name || rTools[0]?.name || "result";
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n");
+      buf = parts.pop() || "";
+      for (const line of parts) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let ev: any;
+        try { ev = JSON.parse(payload); } catch { continue; }
+        if (ev.type === "response.function_call_arguments.delta") args += ev.delta || "";
+        else if (ev.type === "response.function_call_arguments.done" && ev.arguments) args = ev.arguments;
+        else if (ev.type === "response.output_text.delta") text += ev.delta || "";
+        else if (ev.type === "response.output_item.added" && ev.item?.type === "function_call" && ev.item?.name) name = ev.item.name;
+      }
+    }
+
+    if (!args && !text) throw new Error("empty deep response");
+    const shaped = {
+      choices: [{
+        message: args
+          ? { tool_calls: [{ function: { name, arguments: args } }] }
+          : { content: text },
+      }],
+    };
+    return {
+      ok: true,
+      status: 200,
+      json: async () => shaped,
+    } as unknown as Response;
+  } catch (e) {
+    console.error("Deep tier failed, falling back to fast model:", e);
+    return aiCall(apiKey, messages, tools, toolChoice, "fast");
+  }
+}
 
 function aiImageCall(apiKey: string, prompt: string) {
   return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
