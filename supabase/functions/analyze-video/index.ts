@@ -791,6 +791,110 @@ RULES:
       return new Response(JSON.stringify({ imageUrl, ...quiz }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "generate-revision-plan") {
+      const { days } = body;
+      const planDays = Math.min(Math.max(Number(days) || 7, 3), 14);
+
+      const { data: attempts } = await supabase
+        .from("quiz_attempts")
+        .select("topic, video_title, question, selected_answer, correct_answer, is_correct, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(300);
+
+      const rows = attempts || [];
+      if (rows.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "NO_DATA", message: "Attempt a few quizzes first — the plan is built from your mistakes." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const byTopic: Record<string, { total: number; wrong: number; examples: string[] }> = {};
+      for (const r of rows as any[]) {
+        const t = r.topic || r.video_title || "General";
+        byTopic[t] ??= { total: 0, wrong: 0, examples: [] };
+        byTopic[t].total++;
+        if (!r.is_correct) {
+          byTopic[t].wrong++;
+          if (byTopic[t].examples.length < 3) {
+            byTopic[t].examples.push(`Q: ${r.question} | chose: ${r.selected_answer} | correct: ${r.correct_answer}`);
+          }
+        }
+      }
+      const stats = Object.entries(byTopic)
+        .map(([topic, v]) => ({ topic, accuracy: Math.round(((v.total - v.wrong) / v.total) * 100), ...v }))
+        .sort((a, b) => a.accuracy - b.accuracy)
+        .slice(0, 12);
+
+      const rpResp = await aiCallDeep(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You are an exam coach who builds precise, realistic daily revision plans.
+
+RULES:
+- Spend the most time on the lowest-accuracy topics; keep strong topics to short spaced-recall touch-ups.
+- Every day must total 45-90 minutes and list concrete tasks (revise X, 15 MCQs on Y, redo the mistake below).
+- Diagnose the ROOT CAUSE of each weak topic from the actual wrong answers (concept gap, formula slip, careless reading), then give the fix.
+- Never invent topics that are not in the data.` },
+          { role: "user", content: `Build a ${planDays}-day adaptive revision plan.\n\nTopic performance:\n${stats.map((s) => `- ${s.topic}: ${s.accuracy}% (${s.wrong}/${s.total} wrong)\n  ${s.examples.join("\n  ")}`).join("\n")}` },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_revision_plan",
+            description: "Return an adaptive revision plan",
+            parameters: {
+              type: "object",
+              properties: {
+                headline: { type: "string" },
+                focusTopics: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      topic: { type: "string" },
+                      accuracy: { type: "number" },
+                      rootCause: { type: "string" },
+                      fix: { type: "string" },
+                    },
+                    required: ["topic", "accuracy", "rootCause", "fix"],
+                    additionalProperties: false,
+                  },
+                },
+                days: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      day: { type: "number" },
+                      focus: { type: "string" },
+                      minutes: { type: "number" },
+                      tasks: { type: "array", items: { type: "string" } },
+                    },
+                    required: ["day", "focus", "minutes", "tasks"],
+                    additionalProperties: false,
+                  },
+                },
+                weeklyGoal: { type: "string" },
+              },
+              required: ["headline", "focusTopics", "days", "weeklyGoal"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_revision_plan" } },
+      );
+
+      if (!rpResp.ok) {
+        const errResp = handleAIError(rpResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${rpResp.status}`);
+      }
+      const plan = parseToolResponse(await rpResp.json());
+      return new Response(JSON.stringify(plan), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("Edge function error:", e);
