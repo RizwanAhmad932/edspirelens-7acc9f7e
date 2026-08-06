@@ -79,6 +79,22 @@ export interface DiagramQuiz {
   questions: DiagramQuizQuestion[];
 }
 
+export interface RevisionPlan {
+  headline: string;
+  focusTopics: { topic: string; accuracy: number; rootCause: string; fix: string }[];
+  days: { day: number; focus: string; minutes: number; tasks: string[] }[];
+  weeklyGoal: string;
+}
+
+export async function generateRevisionPlan(days = 7): Promise<RevisionPlan> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: { videoUrl: "", action: "generate-revision-plan", days },
+  });
+  if (error) throw new Error(error.message || "Failed to build revision plan");
+  if (data?.error) throw new Error(data.message || data.error);
+  return data;
+}
+
 export async function generateShortNotes(chapterTitle: string, transcript: TranscriptSegment[]): Promise<ShortNotes> {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
