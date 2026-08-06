@@ -119,16 +119,51 @@ async function getVideoTitle(videoId: string): Promise<string> {
   return "YouTube Video";
 }
 
-function aiCall(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
-  const body: any = { model: "google/gemini-3.6-flash", messages };
+// Model routing: "fast" for high-volume/simple generation, "deep" for
+// exam-accuracy critical work (quiz, PYQ, board notes, diagram MCQs).
+const MODELS = {
+  fast: "google/gemini-3.6-flash",
+  deep: "openai/gpt-5.6-sol",
+} as const;
+
+async function aiCall(
+  apiKey: string,
+  messages: any[],
+  tools?: any[],
+  toolChoice?: any,
+  tier: keyof typeof MODELS = "fast",
+) {
+  const model = MODELS[tier];
+  const body: any = { model, messages };
   if (tools) body.tools = tools;
   if (toolChoice) body.tool_choice = toolChoice;
-  return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  // GPT-5.6 chat-completions requires reasoning to be off when tools are used.
+  if (model.startsWith("openai/gpt-5.6")) body.reasoning_effort = "none";
+
+  const send = () =>
+    fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  let resp = await send();
+  // One backoff retry on transient upstream failures, then fall back to the
+  // fast model so a deep-tier hiccup never blocks the student.
+  if (resp.status === 429 || resp.status >= 500) {
+    await new Promise((r) => setTimeout(r, 1200));
+    resp = await send();
+    if ((resp.status === 429 || resp.status >= 500) && tier === "deep") {
+      body.model = MODELS.fast;
+      delete body.reasoning_effort;
+      resp = await send();
+    }
+  }
+  return resp;
 }
+
+const aiCallDeep = (apiKey: string, messages: any[], tools?: any[], toolChoice?: any) =>
+  aiCall(apiKey, messages, tools, toolChoice, "deep");
 
 function aiImageCall(apiKey: string, prompt: string) {
   return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
