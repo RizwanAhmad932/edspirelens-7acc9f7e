@@ -119,15 +119,129 @@ async function getVideoTitle(videoId: string): Promise<string> {
   return "YouTube Video";
 }
 
-function aiCall(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
-  const body: any = { model: "google/gemini-3.6-flash", messages };
+// Model routing: "fast" for high-volume/simple generation, "deep" for
+// exam-accuracy critical work (quiz, PYQ, board notes, diagram MCQs).
+const MODELS = {
+  fast: "google/gemini-3.6-flash",
+  deep: "openai/gpt-5.6-sol",
+} as const;
+
+async function aiCall(
+  apiKey: string,
+  messages: any[],
+  tools?: any[],
+  toolChoice?: any,
+  tier: keyof typeof MODELS = "fast",
+) {
+  const model = MODELS[tier];
+  const body: any = { model, messages };
   if (tools) body.tools = tools;
   if (toolChoice) body.tool_choice = toolChoice;
-  return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  // GPT-5.6 chat-completions requires reasoning to be off when tools are used.
+  if (model.startsWith("openai/gpt-5.6")) body.reasoning_effort = "none";
+
+  const send = () =>
+    fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  let resp = await send();
+  // One backoff retry on transient upstream failures, then fall back to the
+  // fast model so a deep-tier hiccup never blocks the student.
+  if (resp.status === 429 || resp.status >= 500) {
+    await new Promise((r) => setTimeout(r, 1200));
+    resp = await send();
+    if ((resp.status === 429 || resp.status >= 500) && tier === "deep") {
+      body.model = MODELS.fast;
+      delete body.reasoning_effort;
+      resp = await send();
+    }
+  }
+  return resp;
+}
+
+/**
+ * Deep tier — OpenAI reasoning model over the gateway Responses API (streamed,
+ * as required for reasoning models). Returns a chat-completions-shaped result
+ * so callers can keep using parseToolResponse(). Falls back to the fast model
+ * on any upstream failure so a student never sees a dead panel.
+ */
+async function aiCallDeep(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
+  try {
+    const input = messages.map((m) => ({
+      role: m.role === "system" ? "developer" : m.role,
+      content: [{ type: "input_text", text: String(m.content ?? "") }],
+    }));
+    const rTools = (tools || []).map((t) => ({
+      type: "function",
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+      strict: false,
+    }));
+    const rChoice = toolChoice?.function?.name
+      ? { type: "function", name: toolChoice.function.name }
+      : undefined;
+
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODELS.deep,
+        stream: true,
+        store: false,
+        reasoning: { effort: "low" },
+        input,
+        ...(rTools.length ? { tools: rTools } : {}),
+        ...(rChoice ? { tool_choice: rChoice } : {}),
+      }),
+    });
+    if (!resp.ok || !resp.body) throw new Error(`responses ${resp.status}`);
+
+    let args = "";
+    let text = "";
+    let name = toolChoice?.function?.name || rTools[0]?.name || "result";
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n");
+      buf = parts.pop() || "";
+      for (const line of parts) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let ev: any;
+        try { ev = JSON.parse(payload); } catch { continue; }
+        if (ev.type === "response.function_call_arguments.delta") args += ev.delta || "";
+        else if (ev.type === "response.function_call_arguments.done" && ev.arguments) args = ev.arguments;
+        else if (ev.type === "response.output_text.delta") text += ev.delta || "";
+        else if (ev.type === "response.output_item.added" && ev.item?.type === "function_call" && ev.item?.name) name = ev.item.name;
+      }
+    }
+
+    if (!args && !text) throw new Error("empty deep response");
+    const shaped = {
+      choices: [{
+        message: args
+          ? { tool_calls: [{ function: { name, arguments: args } }] }
+          : { content: text },
+      }],
+    };
+    return {
+      ok: true,
+      status: 200,
+      json: async () => shaped,
+    } as unknown as Response;
+  } catch (e) {
+    console.error("Deep tier failed, falling back to fast model:", e);
+    return aiCall(apiKey, messages, tools, toolChoice, "fast");
+  }
 }
 
 function aiImageCall(apiKey: string, prompt: string) {
@@ -348,7 +462,7 @@ Return:
       if (len > 18000) targetCount = 45;
       if (len > 30000) targetCount = 60;
 
-      const quizResponse = await aiCall(
+      const quizResponse = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You are a rigorous exam quiz setter (CBSE/ICSE/NEET/JEE standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
@@ -442,7 +556,7 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
       if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const examLabel = exam || board || "CBSE Board";
-      const pyqResp = await aiCall(
+      const pyqResp = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
@@ -564,7 +678,7 @@ ${transcriptText.substring(0, 20000)}`,
       const { chapterTitle, transcript: transcriptText } = body;
       if (!transcriptText) return new Response(JSON.stringify({ error: "transcript required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const tnResp = await aiCall(
+      const tnResp = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
@@ -709,7 +823,7 @@ RULES:
       const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (!imageUrl) throw new Error("No diagram image returned");
 
-      const qResp = await aiCall(
+      const qResp = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You write diagram-based labeling MCQs in the exact style of ${examLabel} exams. Exactly one option is correct, the other three are anatomically/scientifically plausible distractors from the same diagram family. Add a one-line explanation of the correct part's function or identity.` },
@@ -754,6 +868,110 @@ RULES:
       }
       const quiz = parseToolResponse(await qResp.json());
       return new Response(JSON.stringify({ imageUrl, ...quiz }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "generate-revision-plan") {
+      const { days } = body;
+      const planDays = Math.min(Math.max(Number(days) || 7, 3), 14);
+
+      const { data: attempts } = await supabase
+        .from("quiz_attempts")
+        .select("topic, video_title, question, selected_answer, correct_answer, is_correct, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(300);
+
+      const rows = attempts || [];
+      if (rows.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "NO_DATA", message: "Attempt a few quizzes first — the plan is built from your mistakes." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const byTopic: Record<string, { total: number; wrong: number; examples: string[] }> = {};
+      for (const r of rows as any[]) {
+        const t = r.topic || r.video_title || "General";
+        byTopic[t] ??= { total: 0, wrong: 0, examples: [] };
+        byTopic[t].total++;
+        if (!r.is_correct) {
+          byTopic[t].wrong++;
+          if (byTopic[t].examples.length < 3) {
+            byTopic[t].examples.push(`Q: ${r.question} | chose: ${r.selected_answer} | correct: ${r.correct_answer}`);
+          }
+        }
+      }
+      const stats = Object.entries(byTopic)
+        .map(([topic, v]) => ({ topic, accuracy: Math.round(((v.total - v.wrong) / v.total) * 100), ...v }))
+        .sort((a, b) => a.accuracy - b.accuracy)
+        .slice(0, 12);
+
+      const rpResp = await aiCallDeep(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You are an exam coach who builds precise, realistic daily revision plans.
+
+RULES:
+- Spend the most time on the lowest-accuracy topics; keep strong topics to short spaced-recall touch-ups.
+- Every day must total 45-90 minutes and list concrete tasks (revise X, 15 MCQs on Y, redo the mistake below).
+- Diagnose the ROOT CAUSE of each weak topic from the actual wrong answers (concept gap, formula slip, careless reading), then give the fix.
+- Never invent topics that are not in the data.` },
+          { role: "user", content: `Build a ${planDays}-day adaptive revision plan.\n\nTopic performance:\n${stats.map((s) => `- ${s.topic}: ${s.accuracy}% (${s.wrong}/${s.total} wrong)\n  ${s.examples.join("\n  ")}`).join("\n")}` },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_revision_plan",
+            description: "Return an adaptive revision plan",
+            parameters: {
+              type: "object",
+              properties: {
+                headline: { type: "string" },
+                focusTopics: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      topic: { type: "string" },
+                      accuracy: { type: "number" },
+                      rootCause: { type: "string" },
+                      fix: { type: "string" },
+                    },
+                    required: ["topic", "accuracy", "rootCause", "fix"],
+                    additionalProperties: false,
+                  },
+                },
+                days: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      day: { type: "number" },
+                      focus: { type: "string" },
+                      minutes: { type: "number" },
+                      tasks: { type: "array", items: { type: "string" } },
+                    },
+                    required: ["day", "focus", "minutes", "tasks"],
+                    additionalProperties: false,
+                  },
+                },
+                weeklyGoal: { type: "string" },
+              },
+              required: ["headline", "focusTopics", "days", "weeklyGoal"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_revision_plan" } },
+      );
+
+      if (!rpResp.ok) {
+        const errResp = handleAIError(rpResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${rpResp.status}`);
+      }
+      const plan = parseToolResponse(await rpResp.json());
+      return new Response(JSON.stringify(plan), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });

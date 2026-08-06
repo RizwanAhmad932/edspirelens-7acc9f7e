@@ -7,6 +7,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useAppLogo } from "@/hooks/use-app-logo";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import RevisionPlanPanel from "@/components/RevisionPlanPanel";
 
 interface Attempt {
   id: string;
@@ -203,6 +204,8 @@ const Analytics = () => {
                 )}
               </div>
             )}
+
+            <RevisionPlanPanel />
           </>
         )}
       </main>
