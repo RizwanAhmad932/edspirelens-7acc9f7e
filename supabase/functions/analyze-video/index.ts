@@ -383,7 +383,7 @@ Return:
       if (len > 18000) targetCount = 45;
       if (len > 30000) targetCount = 60;
 
-      const quizResponse = await aiCall(
+      const quizResponse = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You are a rigorous exam quiz setter (CBSE/ICSE/NEET/JEE standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
@@ -477,7 +477,7 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
       if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const examLabel = exam || board || "CBSE Board";
-      const pyqResp = await aiCall(
+      const pyqResp = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
@@ -599,7 +599,7 @@ ${transcriptText.substring(0, 20000)}`,
       const { chapterTitle, transcript: transcriptText } = body;
       if (!transcriptText) return new Response(JSON.stringify({ error: "transcript required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const tnResp = await aiCall(
+      const tnResp = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
@@ -744,7 +744,7 @@ RULES:
       const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (!imageUrl) throw new Error("No diagram image returned");
 
-      const qResp = await aiCall(
+      const qResp = await aiCallDeep(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You write diagram-based labeling MCQs in the exact style of ${examLabel} exams. Exactly one option is correct, the other three are anatomically/scientifically plausible distractors from the same diagram family. Add a one-line explanation of the correct part's function or identity.` },
