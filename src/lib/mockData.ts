@@ -1,5 +1,59 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/* ------------------------------------------------------------------ *
+ * Study-material cache — keeps the last summaries, notes, quizzes,
+ * flashcards, PYQs and diagram MCQs in localStorage so panels open
+ * instantly (and keep working) on slow or offline connections.
+ * ------------------------------------------------------------------ */
+const ARTIFACT_PREFIX = "edspire:artifact:v1:";
+const ARTIFACT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function hashKey(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
+
+function artifactKey(kind: string, seed: string) {
+  return `${ARTIFACT_PREFIX}${kind}:${hashKey(seed)}`;
+}
+
+export function readArtifact<T>(kind: string, seed: string): T | null {
+  try {
+    const raw = localStorage.getItem(artifactKey(kind, seed));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - (parsed.ts || 0) > ARTIFACT_TTL) return null;
+    return parsed.value as T;
+  } catch { return null; }
+}
+
+export function writeArtifact<T>(kind: string, seed: string, value: T) {
+  try {
+    localStorage.setItem(artifactKey(kind, seed), JSON.stringify({ ts: Date.now(), value }));
+  } catch {
+    // Storage full → drop the oldest cached artifacts and retry once.
+    try {
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith(ARTIFACT_PREFIX));
+      keys
+        .map((k) => ({ k, ts: JSON.parse(localStorage.getItem(k) || "{}").ts || 0 }))
+        .sort((a, b) => a.ts - b.ts)
+        .slice(0, Math.ceil(keys.length / 2))
+        .forEach(({ k }) => localStorage.removeItem(k));
+      localStorage.setItem(artifactKey(kind, seed), JSON.stringify({ ts: Date.now(), value }));
+    } catch { /* give up silently */ }
+  }
+}
+
+/** Cache-first wrapper: returns cached material instantly, otherwise generates. */
+async function cached<T>(kind: string, seed: string, run: () => Promise<T>): Promise<T> {
+  const hit = readArtifact<T>(kind, seed);
+  if (hit) return hit;
+  const value = await run();
+  writeArtifact(kind, seed, value);
+  return value;
+}
+
 export interface TranscriptSegment {
   timestamp: string;
   seconds: number;
@@ -96,6 +150,8 @@ export async function generateRevisionPlan(days = 7): Promise<RevisionPlan> {
 }
 
 export async function generateShortNotes(chapterTitle: string, transcript: TranscriptSegment[]): Promise<ShortNotes> {
+  const seed = chapterTitle + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("short-notes", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -106,10 +162,13 @@ export async function generateShortNotes(chapterTitle: string, transcript: Trans
   });
   if (error) throw new Error(error.message || "Failed to generate short notes");
   if (data?.error) throw new Error(data.message || data.error);
-  return data;
+  return data as ShortNotes;
+  });
 }
 
 export async function generateDiagramQuiz(chapterTitle: string, transcript: TranscriptSegment[], exam: string): Promise<DiagramQuiz> {
+  const seed = chapterTitle + "|" + exam + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("diagram-quiz", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -121,7 +180,8 @@ export async function generateDiagramQuiz(chapterTitle: string, transcript: Tran
   });
   if (error) throw new Error(error.message || "Failed to generate diagram quiz");
   if (data?.error) throw new Error(data.message || data.error);
-  return data;
+  return data as DiagramQuiz;
+  });
 }
 
 export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
@@ -145,6 +205,8 @@ export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
 }
 
 export async function generateQuiz(transcript: TranscriptSegment[]): Promise<QuizQuestion[]> {
+  const seed = transcript.map((s) => s.text).join(" ");
+  return cached("quiz", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -155,10 +217,14 @@ export async function generateQuiz(transcript: TranscriptSegment[]): Promise<Qui
 
   if (error) throw new Error(error.message || "Failed to generate quiz");
   if (data?.error) throw new Error(data.message || data.error);
-  return data.questions || [];
+  return (data.questions || []) as QuizQuestion[];
+  });
 }
 
 export async function generateFlashcards(transcript: TranscriptSegment[]): Promise<Flashcard[]> {
+  const seed = transcript.map((s) => s.text).join(" ");
+  const hit = readArtifact<Flashcard[]>("flashcards", seed);
+  if (hit?.length) return hit;
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -179,6 +245,7 @@ export async function generateFlashcards(transcript: TranscriptSegment[]): Promi
   }
   const cards: Flashcard[] = data?.flashcards || [];
   if (cards.length === 0) return buildFallbackFlashcards(transcript);
+  writeArtifact("flashcards", seed, cards);
   return cards;
 }
 
@@ -214,6 +281,8 @@ export async function generatePYQ(
   transcript: TranscriptSegment[],
   exam: string,
 ): Promise<{ board: string; questions: PYQQuestion[] }> {
+  const seed = chapterTitle + "|" + exam + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("pyq", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -225,13 +294,16 @@ export async function generatePYQ(
   });
   if (error) throw new Error(error.message || "Failed to generate PYQ");
   if (data?.error) throw new Error(data.message || data.error);
-  return data;
+  return data as { board: string; questions: PYQQuestion[] };
+  });
 }
 
 export async function generateTeacherNotes(
   chapterTitle: string,
   transcript: TranscriptSegment[],
 ): Promise<TeacherNoteBlock[]> {
+  const seed = chapterTitle + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("teacher-notes", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -242,7 +314,8 @@ export async function generateTeacherNotes(
   });
   if (error) throw new Error(error.message || "Failed to extract teacher notes");
   if (data?.error) throw new Error(data.message || data.error);
-  return data.blocks || [];
+  return (data.blocks || []) as TeacherNoteBlock[];
+  });
 }
 
 export async function recordQuizAttempt(payload: {
