@@ -126,6 +126,32 @@ const MODELS = {
   deep: "openai/gpt-5.6-sol",
 } as const;
 
+// Shared rigor contract injected into EVERY generation so accuracy and speed
+// are consistent across summaries, notes, quizzes, PYQs, flashcards and plans.
+const RIGOR = `
+
+GLOBAL QUALITY CONTRACT (applies to everything you produce):
+- Correctness beats verbosity. Silently self-check every fact, number, formula, unit and answer key before returning it; if a claim cannot be supported by the provided material or by standard syllabus knowledge, drop it instead of guessing.
+- Never hallucinate: no invented data, citations, years, statistics or exam papers.
+- Use precise syllabus terminology, correct SI units, and standard notation (write fractions/powers in plain text, e.g. v = u + at, H2SO4, 6.022 x 10^23).
+- Be dense and exam-ready: short declarative sentences, no filler, no meta commentary, no apologies, no restating the prompt.
+- Respect the requested counts and JSON schema EXACTLY — no extra keys, no missing fields, no markdown fences inside JSON string values.
+- Answer in the same language register the learner is taught in (English by default; keep technical terms in English even for Hinglish transcripts).
+- Work in one pass: do not deliberate at length, produce the final, verified output immediately.`;
+
+function withRigor(messages: any[]) {
+  let injected = false;
+  const out = messages.map((m) => {
+    if (!injected && m.role === "system") {
+      injected = true;
+      return { ...m, content: `${m.content}${RIGOR}` };
+    }
+    return m;
+  });
+  if (!injected) out.unshift({ role: "system", content: RIGOR.trim() });
+  return out;
+}
+
 async function aiCall(
   apiKey: string,
   messages: any[],
@@ -134,9 +160,11 @@ async function aiCall(
   tier: keyof typeof MODELS = "fast",
 ) {
   const model = MODELS[tier];
-  const body: any = { model, messages };
+  const body: any = { model, messages: withRigor(messages) };
   if (tools) body.tools = tools;
   if (toolChoice) body.tool_choice = toolChoice;
+  // Low temperature = far fewer factual slips on structured study material.
+  if (!model.startsWith("openai/")) body.temperature = 0.2;
   // GPT-5.6 chat-completions requires reasoning to be off when tools are used.
   if (model.startsWith("openai/gpt-5.6")) body.reasoning_effort = "none";
 
@@ -156,6 +184,7 @@ async function aiCall(
     if ((resp.status === 429 || resp.status >= 500) && tier === "deep") {
       body.model = MODELS.fast;
       delete body.reasoning_effort;
+      body.temperature = 0.2;
       resp = await send();
     }
   }
@@ -170,7 +199,7 @@ async function aiCall(
  */
 async function aiCallDeep(apiKey: string, messages: any[], tools?: any[], toolChoice?: any) {
   try {
-    const input = messages.map((m) => ({
+    const input = withRigor(messages).map((m) => ({
       role: m.role === "system" ? "developer" : m.role,
       content: [{ type: "input_text", text: String(m.content ?? "") }],
     }));
