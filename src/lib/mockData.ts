@@ -1,5 +1,59 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/* ------------------------------------------------------------------ *
+ * Study-material cache — keeps the last summaries, notes, quizzes,
+ * flashcards, PYQs and diagram MCQs in localStorage so panels open
+ * instantly (and keep working) on slow or offline connections.
+ * ------------------------------------------------------------------ */
+const ARTIFACT_PREFIX = "edspire:artifact:v1:";
+const ARTIFACT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function hashKey(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
+
+function artifactKey(kind: string, seed: string) {
+  return `${ARTIFACT_PREFIX}${kind}:${hashKey(seed)}`;
+}
+
+export function readArtifact<T>(kind: string, seed: string): T | null {
+  try {
+    const raw = localStorage.getItem(artifactKey(kind, seed));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - (parsed.ts || 0) > ARTIFACT_TTL) return null;
+    return parsed.value as T;
+  } catch { return null; }
+}
+
+export function writeArtifact<T>(kind: string, seed: string, value: T) {
+  try {
+    localStorage.setItem(artifactKey(kind, seed), JSON.stringify({ ts: Date.now(), value }));
+  } catch {
+    // Storage full → drop the oldest cached artifacts and retry once.
+    try {
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith(ARTIFACT_PREFIX));
+      keys
+        .map((k) => ({ k, ts: JSON.parse(localStorage.getItem(k) || "{}").ts || 0 }))
+        .sort((a, b) => a.ts - b.ts)
+        .slice(0, Math.ceil(keys.length / 2))
+        .forEach(({ k }) => localStorage.removeItem(k));
+      localStorage.setItem(artifactKey(kind, seed), JSON.stringify({ ts: Date.now(), value }));
+    } catch { /* give up silently */ }
+  }
+}
+
+/** Cache-first wrapper: returns cached material instantly, otherwise generates. */
+async function cached<T>(kind: string, seed: string, run: () => Promise<T>): Promise<T> {
+  const hit = readArtifact<T>(kind, seed);
+  if (hit) return hit;
+  const value = await run();
+  writeArtifact(kind, seed, value);
+  return value;
+}
+
 export interface TranscriptSegment {
   timestamp: string;
   seconds: number;
