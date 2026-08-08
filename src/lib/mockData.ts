@@ -150,6 +150,8 @@ export async function generateRevisionPlan(days = 7): Promise<RevisionPlan> {
 }
 
 export async function generateShortNotes(chapterTitle: string, transcript: TranscriptSegment[]): Promise<ShortNotes> {
+  const seed = chapterTitle + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("short-notes", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -160,10 +162,13 @@ export async function generateShortNotes(chapterTitle: string, transcript: Trans
   });
   if (error) throw new Error(error.message || "Failed to generate short notes");
   if (data?.error) throw new Error(data.message || data.error);
-  return data;
+  return data as ShortNotes;
+  });
 }
 
 export async function generateDiagramQuiz(chapterTitle: string, transcript: TranscriptSegment[], exam: string): Promise<DiagramQuiz> {
+  const seed = chapterTitle + "|" + exam + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("diagram-quiz", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -175,7 +180,8 @@ export async function generateDiagramQuiz(chapterTitle: string, transcript: Tran
   });
   if (error) throw new Error(error.message || "Failed to generate diagram quiz");
   if (data?.error) throw new Error(data.message || data.error);
-  return data;
+  return data as DiagramQuiz;
+  });
 }
 
 export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
@@ -199,6 +205,8 @@ export async function analyzeVideo(videoUrl: string): Promise<VideoAnalysis> {
 }
 
 export async function generateQuiz(transcript: TranscriptSegment[]): Promise<QuizQuestion[]> {
+  const seed = transcript.map((s) => s.text).join(" ");
+  return cached("quiz", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -209,10 +217,14 @@ export async function generateQuiz(transcript: TranscriptSegment[]): Promise<Qui
 
   if (error) throw new Error(error.message || "Failed to generate quiz");
   if (data?.error) throw new Error(data.message || data.error);
-  return data.questions || [];
+  return (data.questions || []) as QuizQuestion[];
+  });
 }
 
 export async function generateFlashcards(transcript: TranscriptSegment[]): Promise<Flashcard[]> {
+  const seed = transcript.map((s) => s.text).join(" ");
+  const hit = readArtifact<Flashcard[]>("flashcards", seed);
+  if (hit?.length) return hit;
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -233,6 +245,7 @@ export async function generateFlashcards(transcript: TranscriptSegment[]): Promi
   }
   const cards: Flashcard[] = data?.flashcards || [];
   if (cards.length === 0) return buildFallbackFlashcards(transcript);
+  writeArtifact("flashcards", seed, cards);
   return cards;
 }
 
@@ -268,6 +281,8 @@ export async function generatePYQ(
   transcript: TranscriptSegment[],
   exam: string,
 ): Promise<{ board: string; questions: PYQQuestion[] }> {
+  const seed = chapterTitle + "|" + exam + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("pyq", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -279,13 +294,16 @@ export async function generatePYQ(
   });
   if (error) throw new Error(error.message || "Failed to generate PYQ");
   if (data?.error) throw new Error(data.message || data.error);
-  return data;
+  return data as { board: string; questions: PYQQuestion[] };
+  });
 }
 
 export async function generateTeacherNotes(
   chapterTitle: string,
   transcript: TranscriptSegment[],
 ): Promise<TeacherNoteBlock[]> {
+  const seed = chapterTitle + "|" + transcript.map((s) => s.text).join(" ");
+  return cached("teacher-notes", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: {
       videoUrl: "",
@@ -296,7 +314,8 @@ export async function generateTeacherNotes(
   });
   if (error) throw new Error(error.message || "Failed to extract teacher notes");
   if (data?.error) throw new Error(data.message || data.error);
-  return data.blocks || [];
+  return (data.blocks || []) as TeacherNoteBlock[];
+  });
 }
 
 export async function recordQuizAttempt(payload: {
