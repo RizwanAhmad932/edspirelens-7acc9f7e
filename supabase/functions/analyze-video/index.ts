@@ -497,26 +497,29 @@ Return:
       const quizResponse = await aiCallDeep(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are a rigorous exam quiz setter (CBSE/ICSE/NEET/JEE standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
+          { role: "system", content: `You are a rigorous exam paper setter (CBSE/ICSE/NEET/JEE/AP/IB standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
 
 ACCURACY RULES (non-negotiable):
 - Every question must be answerable from the transcript content alone; never invent facts.
-- Exactly ONE option must be unambiguously correct; the other 3 must be plausible but clearly wrong distractors of similar length and style.
+- Exactly ONE option must be unambiguously correct; the other 3 must be plausible, same-length distractors built from real student misconceptions.
 - Never use "All of the above" / "None of the above" unless the teacher used it.
-- Verify each answer against the transcript before returning it. If unsure of the answer, drop the question and write a different one.
-- Spread questions evenly across the whole video (start → middle → end), not just the first minutes.
-- Difficulty mix: ~40% easy (recall), ~40% medium (understanding/application), ~20% hard (HOTS/numerical).
-- For every question also return: a 1-2 sentence explanation of WHY the correct option is right, the sub-topic name, the difficulty, and the transcript timestamp (M:SS) where it was taught.` },
+- Verify each answer (and every numerical step) before returning it. If unsure, replace the question.
+- Spread questions evenly across the whole video (start → middle → end).
+- Difficulty mix: ~25% easy (recall), ~40% medium (understanding/application), ~35% hard (HOTS, numerical, multi-step reasoning).
+- Include exam-authentic advanced formats inside the MCQ shell: Assertion-Reason (A/R with the standard four options), Case-Based / data-interpretation stems, and numerical stems with units.
+- Use LaTeX-style notation for maths, symbols and SI units (e.g. v = u + at, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}).
+- explanation: 1-2 dense sentences giving the decisive reasoning step or formula, plus the misconception the distractors target. No filler.
+- topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.` },
           {
             role: "user",
             content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
 1. Every question the teacher explicitly asks students
-2. Every problem/example the teacher solves
+2. Every problem/example the teacher solves (reproduce the numbers faithfully)
 3. Every concept-check or discussion question
-4. Additional comprehension, application, and HOTS questions — but ONLY about topics covered in THIS video
+4. Additional application, HOTS, Assertion-Reason and case-based questions — but ONLY about topics covered in THIS video
 
 Do NOT create questions about NCERT topics not discussed by the teacher.
-Each question should have 4 options with exactly one correct answer.
+Each question has 4 options with exactly one correct answer.
 Also return explanation, topic, difficulty ("easy"|"medium"|"hard") and timestamp for each question.
 Return EXACTLY ${targetCount} questions — no more, no less.
 
