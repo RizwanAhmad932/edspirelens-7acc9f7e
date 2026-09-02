@@ -1,18 +1,19 @@
-import { useState, useRef, useCallback, useEffect, lazy, Suspense, ReactNode } from "react";
+import { useState, useRef, useCallback, useEffect, Suspense, ReactNode } from "react";
 import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList, Zap, ImagePlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SummaryPanel from "./SummaryPanel";
 import NotesPanel from "./NotesPanel";
 import TopicSearch from "./TopicSearch";
+import { lazyRetry } from "@/lib/lazyRetry";
 
-const QuizPanel = lazy(() => import("./QuizPanel"));
-const FlashcardPanel = lazy(() => import("./FlashcardPanel"));
-const ChatPanel = lazy(() => import("./ChatPanel"));
-const InfographicPanel = lazy(() => import("./InfographicPanel"));
-const PYQPanel = lazy(() => import("./PYQPanel"));
-const TeacherNotesPanel = lazy(() => import("./TeacherNotesPanel"));
-const ShortNotesPanel = lazy(() => import("./ShortNotesPanel"));
-const DiagramQuizPanel = lazy(() => import("./DiagramQuizPanel"));
+const QuizPanel = lazyRetry(() => import("./QuizPanel"), "QuizPanel");
+const FlashcardPanel = lazyRetry(() => import("./FlashcardPanel"), "FlashcardPanel");
+const ChatPanel = lazyRetry(() => import("./ChatPanel"), "ChatPanel");
+const InfographicPanel = lazyRetry(() => import("./InfographicPanel"), "InfographicPanel");
+const PYQPanel = lazyRetry(() => import("./PYQPanel"), "PYQPanel");
+const TeacherNotesPanel = lazyRetry(() => import("./TeacherNotesPanel"), "TeacherNotesPanel");
+const ShortNotesPanel = lazyRetry(() => import("./ShortNotesPanel"), "ShortNotesPanel");
+const DiagramQuizPanel = lazyRetry(() => import("./DiagramQuizPanel"), "DiagramQuizPanel");
 
 const PanelFallback = () => (
   <div className="flex items-center justify-center py-10">
