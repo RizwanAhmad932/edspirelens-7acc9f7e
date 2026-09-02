@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense, memo } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense, memo } from "react";
+import { lazyRetry } from "@/lib/lazyRetry";
 import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
