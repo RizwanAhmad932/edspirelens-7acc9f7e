@@ -30,10 +30,10 @@ import {
   Flashcard,
 } from "@/lib/mockData";
 
-const FestivalOverlay = lazy(() => import("@/components/FestivalOverlay"));
-const FloatingLens = lazy(() => import("@/components/FloatingLens"));
-const AppDrawer = lazy(() => import("@/components/AppDrawer"));
-const TutorialOverlay = lazy(() => import("@/components/TutorialOverlay"));
+const FestivalOverlay = lazyRetry(() => import("@/components/FestivalOverlay"), "FestivalOverlay");
+const FloatingLens = lazyRetry(() => import("@/components/FloatingLens"), "FloatingLens");
+const AppDrawer = lazyRetry(() => import("@/components/AppDrawer"), "AppDrawer");
+const TutorialOverlay = lazyRetry(() => import("@/components/TutorialOverlay"), "TutorialOverlay");
 import { shouldShowTutorial } from "@/lib/tutorial";
 
 const Index = () => {
