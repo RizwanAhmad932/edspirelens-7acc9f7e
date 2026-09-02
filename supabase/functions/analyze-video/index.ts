@@ -597,19 +597,24 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
           { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
 
 RULES:
-- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Very Short / Short / Long / Numerical / Assertion-Reason / Case-Based).
-- Model answers must be marking-scheme accurate: for an N-mark question give roughly N key scoring points, with formulas and units where relevant.
+- Difficulty target: Advanced / Hard. No trivial recall unless the paper itself carries 1-mark recall items.
+- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Assertion-Reason / Case-Based / Very Short / Short / Long Analytical / Numerical).
+- Model answers are official-style marking schemes, written step by step:
+  Step 1 ... [1 Mark] / Formula: ... [1 Mark] / Substitution & unit-correct final answer [1 Mark].
+  For an N-mark question show exactly where each of the N marks is awarded and note where partial credit applies.
+- Use LaTeX-style notation for all equations, symbols and SI units (e.g. \\frac{1}{2}mv^2, \\mathrm{J\\,kg^{-1}\\,K^{-1}}).
+- Add, in one short line at the end of the answer, the examiner insight or common error that loses marks.
 - Stay strictly inside the chapter scope shown in the transcript. Never drift into other chapters.
-- Prioritise the highest-weightage, most repeated question patterns for this chapter.` },
+- Prioritise the highest-weightage, most repeated question patterns for this chapter. Zero fluff.` },
           { role: "user", content: `Generate 18-22 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
 Mix of:
-- 1-mark MCQs / very short answer
+- 1-mark MCQs / very short answer / Assertion-Reason
 - 2-mark short answer
-- 3-mark questions
-- 5-mark long answer
-- Assertion-Reason / Case-based where the exam uses them
+- 3-mark questions (derivation or numerical)
+- 5-mark long analytical answer
+- Case-based / data-interpretation sets where the exam uses them
 
-For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a marking-scheme style model answer.
+For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a step-by-step marking-scheme model answer with [N Mark] annotations.
 Order the questions from lowest marks to highest.
 
 Reference video transcript (do not deviate from chapter scope):
