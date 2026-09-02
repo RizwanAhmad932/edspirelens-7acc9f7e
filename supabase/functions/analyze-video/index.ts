@@ -131,13 +131,16 @@ const MODELS = {
 const RIGOR = `
 
 GLOBAL QUALITY CONTRACT (applies to everything you produce):
-- Correctness beats verbosity. Silently self-check every fact, number, formula, unit and answer key before returning it; if a claim cannot be supported by the provided material or by standard syllabus knowledge, drop it instead of guessing.
-- Never hallucinate: no invented data, citations, years, statistics or exam papers.
-- Use precise syllabus terminology, correct SI units, and standard notation (write fractions/powers in plain text, e.g. v = u + at, H2SO4, 6.022 x 10^23).
-- Be dense and exam-ready: short declarative sentences, no filler, no meta commentary, no apologies, no restating the prompt.
-- Respect the requested counts and JSON schema EXACTLY — no extra keys, no missing fields, no markdown fences inside JSON string values.
-- Answer in the same language register the learner is taught in (English by default; keep technical terms in English even for Hinglish transcripts).
-- Work in one pass: do not deliberate at length, produce the final, verified output immediately.`;
+- ROLE: elite academic subject-matter expert for advanced curricula and competitive exams (Board/AP/IB/JEE/NEET/UPSC standard).
+- ACCURACY: 100% technical and factual accuracy. Zero hallucination — no invented data, years, statistics, citations or exam papers. Silently self-verify every number, formula, unit, derivation step and answer key before returning it; drop anything you cannot verify.
+- DEPTH: go beyond definitions. Where relevant add high-yield exam insight, the decisive step of a derivation, the common student misconception, and a practical application or mnemonic — in one dense clause, not a paragraph.
+- NOTATION: standard LaTeX-style inline notation for maths, units and symbols (E = mc^2, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}). Exact SI units always.
+- CATEGORISATION: every question carries its difficulty, question type (MCQ / Assertion-Reason / Case-Based / Short Answer / Long Analytical / Numerical) and explicit marking scheme where marks apply.
+- ANSWER KEYS: step-by-step model answers written in official marking-scheme style, showing where each mark is awarded.
+- STRUCTURE: clear hierarchy, precise headings, tight bullets, comparative contrasts where they aid recall.
+- NO FLUFF: no conversational filler, no introductions, no meta-commentary, no restating the prompt, no apologies.
+- SCHEMA: respect requested counts and JSON schema EXACTLY — no extra keys, no missing fields, no markdown fences inside JSON string values.
+- Keep technical terms in English even for Hinglish transcripts. Work in one pass: produce the final verified output immediately.`;
 
 function withRigor(messages: any[]) {
   let injected = false;
@@ -494,26 +497,29 @@ Return:
       const quizResponse = await aiCallDeep(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are a rigorous exam quiz setter (CBSE/ICSE/NEET/JEE standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
+          { role: "system", content: `You are a rigorous exam paper setter (CBSE/ICSE/NEET/JEE/AP/IB standard). Generate EXACTLY ${targetCount} multiple-choice questions ONLY from topics the teacher discusses in this specific video.
 
 ACCURACY RULES (non-negotiable):
 - Every question must be answerable from the transcript content alone; never invent facts.
-- Exactly ONE option must be unambiguously correct; the other 3 must be plausible but clearly wrong distractors of similar length and style.
+- Exactly ONE option must be unambiguously correct; the other 3 must be plausible, same-length distractors built from real student misconceptions.
 - Never use "All of the above" / "None of the above" unless the teacher used it.
-- Verify each answer against the transcript before returning it. If unsure of the answer, drop the question and write a different one.
-- Spread questions evenly across the whole video (start → middle → end), not just the first minutes.
-- Difficulty mix: ~40% easy (recall), ~40% medium (understanding/application), ~20% hard (HOTS/numerical).
-- For every question also return: a 1-2 sentence explanation of WHY the correct option is right, the sub-topic name, the difficulty, and the transcript timestamp (M:SS) where it was taught.` },
+- Verify each answer (and every numerical step) before returning it. If unsure, replace the question.
+- Spread questions evenly across the whole video (start → middle → end).
+- Difficulty mix: ~25% easy (recall), ~40% medium (understanding/application), ~35% hard (HOTS, numerical, multi-step reasoning).
+- Include exam-authentic advanced formats inside the MCQ shell: Assertion-Reason (A/R with the standard four options), Case-Based / data-interpretation stems, and numerical stems with units.
+- Use LaTeX-style notation for maths, symbols and SI units (e.g. v = u + at, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}).
+- explanation: 1-2 dense sentences giving the decisive reasoning step or formula, plus the misconception the distractors target. No filler.
+- topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.` },
           {
             role: "user",
             content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
 1. Every question the teacher explicitly asks students
-2. Every problem/example the teacher solves
+2. Every problem/example the teacher solves (reproduce the numbers faithfully)
 3. Every concept-check or discussion question
-4. Additional comprehension, application, and HOTS questions — but ONLY about topics covered in THIS video
+4. Additional application, HOTS, Assertion-Reason and case-based questions — but ONLY about topics covered in THIS video
 
 Do NOT create questions about NCERT topics not discussed by the teacher.
-Each question should have 4 options with exactly one correct answer.
+Each question has 4 options with exactly one correct answer.
 Also return explanation, topic, difficulty ("easy"|"medium"|"hard") and timestamp for each question.
 Return EXACTLY ${targetCount} questions — no more, no less.
 
@@ -591,19 +597,24 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
           { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
 
 RULES:
-- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Very Short / Short / Long / Numerical / Assertion-Reason / Case-Based).
-- Model answers must be marking-scheme accurate: for an N-mark question give roughly N key scoring points, with formulas and units where relevant.
+- Difficulty target: Advanced / Hard. No trivial recall unless the paper itself carries 1-mark recall items.
+- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Assertion-Reason / Case-Based / Very Short / Short / Long Analytical / Numerical).
+- Model answers are official-style marking schemes, written step by step:
+  Step 1 ... [1 Mark] / Formula: ... [1 Mark] / Substitution & unit-correct final answer [1 Mark].
+  For an N-mark question show exactly where each of the N marks is awarded and note where partial credit applies.
+- Use LaTeX-style notation for all equations, symbols and SI units (e.g. \\frac{1}{2}mv^2, \\mathrm{J\\,kg^{-1}\\,K^{-1}}).
+- Add, in one short line at the end of the answer, the examiner insight or common error that loses marks.
 - Stay strictly inside the chapter scope shown in the transcript. Never drift into other chapters.
-- Prioritise the highest-weightage, most repeated question patterns for this chapter.` },
+- Prioritise the highest-weightage, most repeated question patterns for this chapter. Zero fluff.` },
           { role: "user", content: `Generate 18-22 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
 Mix of:
-- 1-mark MCQs / very short answer
+- 1-mark MCQs / very short answer / Assertion-Reason
 - 2-mark short answer
-- 3-mark questions
-- 5-mark long answer
-- Assertion-Reason / Case-based where the exam uses them
+- 3-mark questions (derivation or numerical)
+- 5-mark long analytical answer
+- Case-based / data-interpretation sets where the exam uses them
 
-For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a marking-scheme style model answer.
+For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a step-by-step marking-scheme model answer with [N Mark] annotations.
 Order the questions from lowest marks to highest.
 
 Reference video transcript (do not deviate from chapter scope):
