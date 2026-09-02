@@ -3,17 +3,18 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
+import { lazyRetry } from "@/lib/lazyRetry";
 
-const Auth = lazy(() => import("./pages/Auth"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const Profile = lazy(() => import("./pages/Profile"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const Analytics = lazy(() => import("./pages/Analytics"));
-const About = lazy(() => import("./pages/About"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const Auth = lazyRetry(() => import("./pages/Auth"), "Auth");
+const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"), "ResetPassword");
+const Profile = lazyRetry(() => import("./pages/Profile"), "Profile");
+const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"), "AdminDashboard");
+const Analytics = lazyRetry(() => import("./pages/Analytics"), "Analytics");
+const About = lazyRetry(() => import("./pages/About"), "About");
+const NotFound = lazyRetry(() => import("./pages/NotFound"), "NotFound");
 
 const RouteFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
