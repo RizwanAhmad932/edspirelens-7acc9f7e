@@ -116,7 +116,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
         {EXAMS.map((e) => (
           <button
             key={e}
-            onClick={() => setExam(e)}
+            onClick={() => { setExam(e); setQuestions([]); setPage(0); }}
             className={cn(
               "text-[9px] font-mono-hud uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors",
               exam === e
@@ -128,6 +128,11 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
           </button>
         ))}
       </div>
+
+      <p className="text-[9px] font-mono-hud uppercase tracking-wider text-muted-foreground">
+        39-year archive{yearsCovered.length ? ` · ${yearsCovered[0]}–${yearsCovered[yearsCovered.length - 1]} loaded` : ""}
+      </p>
+
 
       {questions.length === 0 && !loading && (
         <div className="text-center py-6 space-y-3">
