@@ -855,21 +855,14 @@ RULES:
       const examLabel = exam || "NEET/Board";
       const imgPrompt = `Create a clean, labeled scientific/educational diagram for the chapter "${chapterTitle}" in the style of ${examLabel} exam textbooks.\n- White background, crisp lines, scientifically accurate\n- Label 5 key parts with letters A, B, C, D, E in small circles connected by thin lines\n- Single clear textbook-style diagram, no decoration\n\nChapter context: ${(transcriptText || "").substring(0, 1500)}`;
 
-      const imgResp = await aiImageCall(LOVABLE_API_KEY, imgPrompt);
-      if (!imgResp.ok) {
-        const errResp = handleAIError(imgResp);
-        if (errResp) return errResp;
-        throw new Error(`Image AI error: ${imgResp.status}`);
-      }
-      const imgData = await imgResp.json();
-      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (!imageUrl) throw new Error("No diagram image returned");
+      // Diagram image and its MCQs are independent — run them in parallel.
+      const imgPromise = aiImageCall(LOVABLE_API_KEY, imgPrompt);
 
       const qResp = await aiCall(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You write diagram-based labeling MCQs in the exact style of ${examLabel} exams. Exactly one option is correct, the other three are anatomically/scientifically plausible distractors from the same diagram family. Add a one-line explanation of the correct part's function or identity.` },
-          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E, e.g. "The part labeled A in the diagram is:" with 4 plausible options and an explanation.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
+          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E, e.g. "The part labeled A in the diagram is:" with 4 plausible options and an explanation.\n\nChapter context:\n${(transcriptText || "").substring(0, 4000)}` }
         ],
         [{
           type: "function",
@@ -909,6 +902,17 @@ RULES:
         throw new Error(`AI error: ${qResp.status}`);
       }
       const quiz = parseToolResponse(await qResp.json());
+
+      const imgResp = await imgPromise;
+      if (!imgResp.ok) {
+        const errResp = handleAIError(imgResp);
+        if (errResp) return errResp;
+        throw new Error(`Image AI error: ${imgResp.status}`);
+      }
+      const imgData = await imgResp.json();
+      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!imageUrl) throw new Error("No diagram image returned");
+
       return new Response(JSON.stringify({ imageUrl, ...quiz }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
