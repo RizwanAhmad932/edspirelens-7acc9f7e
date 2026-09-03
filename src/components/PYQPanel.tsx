@@ -6,7 +6,15 @@ import { PanelHeader, ExportButton } from "@/components/panel/PanelFrame";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const EXAMS = ["CBSE Board", "ICSE Board", "State Board", "JEE", "NEET", "UPSC"];
+const EXAMS = [
+  "CBSE Board",
+  "ICSE Board",
+  "State Board",
+  "JEE Main",
+  "JEE Advanced",
+  "NEET",
+  "UPSC",
+];
 
 interface Props {
   chapterTitle: string;
@@ -16,6 +24,8 @@ interface Props {
 const PYQPanel = ({ chapterTitle, transcript }: Props) => {
   const [exam, setExam] = useState("CBSE Board");
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
   const [questions, setQuestions] = useState<PYQQuestion[]>([]);
   const [filter, setFilter] = useState<number | "all">("all");
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -23,8 +33,9 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const data = await generatePYQ(chapterTitle, transcript, exam);
+      const data = await generatePYQ(chapterTitle, transcript, exam, 1);
       setQuestions(data.questions || []);
+      setPage(1);
       setRevealed({});
       setFilter("all");
     } catch (e: any) {
@@ -34,12 +45,45 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
     }
   };
 
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const data = await generatePYQ(
+        chapterTitle,
+        transcript,
+        exam,
+        next,
+        questions.map((q) => q.question),
+      );
+      const fresh = (data.questions || []).filter(
+        (q) => !questions.some((old) => old.question === q.question),
+      );
+      if (!fresh.length) {
+        toast.info("No further unseen questions in the archive for this chapter.");
+      } else {
+        setQuestions((prev) => [...prev, ...fresh]);
+        toast.success(`+${fresh.length} more PYQs added`);
+      }
+      setPage(next);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load more PYQs");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const markGroups = useMemo(
     () => Array.from(new Set(questions.map((q) => q.marks))).sort((a, b) => a - b),
     [questions],
   );
   const visible = filter === "all" ? questions : questions.filter((q) => q.marks === filter);
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+  const yearsCovered = useMemo(
+    () => Array.from(new Set(questions.map((q) => q.year).filter(Boolean))).sort(),
+    [questions],
+  );
+
 
   return (
     <div className="space-y-3">
