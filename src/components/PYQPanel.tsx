@@ -1,12 +1,20 @@
 import { useMemo, useState } from "react";
-import { Loader2, Sparkles, Award, ChevronDown } from "lucide-react";
+import { Loader2, Sparkles, Award, ChevronDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generatePYQ, PYQQuestion, TranscriptSegment } from "@/lib/mockData";
 import { PanelHeader, ExportButton } from "@/components/panel/PanelFrame";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const EXAMS = ["CBSE Board", "ICSE Board", "State Board", "JEE", "NEET", "UPSC"];
+const EXAMS = [
+  "CBSE Board",
+  "ICSE Board",
+  "State Board",
+  "JEE Main",
+  "JEE Advanced",
+  "NEET",
+  "UPSC",
+];
 
 interface Props {
   chapterTitle: string;
@@ -16,6 +24,8 @@ interface Props {
 const PYQPanel = ({ chapterTitle, transcript }: Props) => {
   const [exam, setExam] = useState("CBSE Board");
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
   const [questions, setQuestions] = useState<PYQQuestion[]>([]);
   const [filter, setFilter] = useState<number | "all">("all");
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -23,8 +33,9 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const data = await generatePYQ(chapterTitle, transcript, exam);
+      const data = await generatePYQ(chapterTitle, transcript, exam, 1);
       setQuestions(data.questions || []);
+      setPage(1);
       setRevealed({});
       setFilter("all");
     } catch (e: any) {
@@ -34,12 +45,45 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
     }
   };
 
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const data = await generatePYQ(
+        chapterTitle,
+        transcript,
+        exam,
+        next,
+        questions.map((q) => q.question),
+      );
+      const fresh = (data.questions || []).filter(
+        (q) => !questions.some((old) => old.question === q.question),
+      );
+      if (!fresh.length) {
+        toast.info("No further unseen questions in the archive for this chapter.");
+      } else {
+        setQuestions((prev) => [...prev, ...fresh]);
+        toast.success(`+${fresh.length} more PYQs added`);
+      }
+      setPage(next);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load more PYQs");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const markGroups = useMemo(
     () => Array.from(new Set(questions.map((q) => q.marks))).sort((a, b) => a - b),
     [questions],
   );
   const visible = filter === "all" ? questions : questions.filter((q) => q.marks === filter);
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+  const yearsCovered = useMemo(
+    () => Array.from(new Set(questions.map((q) => q.year).filter(Boolean))).sort(),
+    [questions],
+  );
+
 
   return (
     <div className="space-y-3">
@@ -72,7 +116,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
         {EXAMS.map((e) => (
           <button
             key={e}
-            onClick={() => setExam(e)}
+            onClick={() => { setExam(e); setQuestions([]); setPage(0); }}
             className={cn(
               "text-[9px] font-mono-hud uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors",
               exam === e
@@ -84,6 +128,11 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
           </button>
         ))}
       </div>
+
+      <p className="text-[9px] font-mono-hud uppercase tracking-wider text-muted-foreground">
+        39-year archive{yearsCovered.length ? ` · ${yearsCovered[0]}–${yearsCovered[yearsCovered.length - 1]} loaded` : ""}
+      </p>
+
 
       {questions.length === 0 && !loading && (
         <div className="text-center py-6 space-y-3">
@@ -152,9 +201,21 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
             ))}
           </div>
 
-          <Button variant="outline" size="sm" onClick={handleGenerate} className="w-full">
-            Regenerate paper
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="gap-2 gradient-primary text-primary-foreground"
+            >
+              {loadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              More PYQs
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleGenerate} disabled={loading || loadingMore}>
+              Regenerate paper
+            </Button>
+          </div>
+
         </>
       )}
     </div>

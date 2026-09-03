@@ -589,18 +589,31 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
     }
 
     if (action === "generate-pyq") {
-      const { chapterTitle, transcript: transcriptText, board, exam } = body;
+      const { chapterTitle, transcript: transcriptText, board, exam, page: rawPage, seenQuestions } = body;
       if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const examLabel = exam || board || "CBSE Board";
+      const page = Math.max(1, Math.min(20, Number(rawPage) || 1));
+      const latestYear = new Date().getFullYear() - 1;
+      const earliestYear = latestYear - 38; // 39-year archive
+      // Each page walks a different slice of the 39-year window so "more PYQ"
+      // never repeats the same years.
+      const sliceSpan = 5;
+      const sliceStart = latestYear - ((page - 1) * sliceSpan);
+      const windowEnd = Math.max(earliestYear, sliceStart);
+      const windowStart = Math.max(earliestYear, sliceStart - (sliceSpan - 1));
+      const alreadyAsked: string[] = Array.isArray(seenQuestions) ? seenQuestions.slice(-40) : [];
+
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
+          { role: "system", content: `You are an expert ${examLabel} exam analyst with the complete ${earliestYear}-${latestYear} past-paper archive (39 years) memorised. You reproduce Previous Year Questions (PYQs) in the EXACT wording style, format, marking scheme and difficulty of real past ${examLabel} papers.
 
 RULES:
 - Difficulty target: Advanced / Hard. No trivial recall unless the paper itself carries 1-mark recall items.
-- Tag each question with a plausible exam year from the last 10 years and its question type (MCQ / Assertion-Reason / Case-Based / Very Short / Short / Long Analytical / Numerical).
+- Tag every question with a real, plausible paper year between ${earliestYear} and ${latestYear}, plus its question type (MCQ / Assertion-Reason / Case-Based / Very Short / Short / Long Analytical / Numerical).
+- For JEE Main / JEE Advanced / NEET / UPSC use that exam's authentic paper pattern (4-option MCQs, integer/numerical-value questions, statement-based and matching sets, negative-marking notes where applicable).
+- For CBSE / ICSE / State Board use the board's official marking-scheme format.
 - Model answers are official-style marking schemes, written step by step:
   Step 1 ... [1 Mark] / Formula: ... [1 Mark] / Substitution & unit-correct final answer [1 Mark].
   For an N-mark question show exactly where each of the N marks is awarded and note where partial credit applies.
@@ -608,7 +621,7 @@ RULES:
 - Add, in one short line at the end of the answer, the examiner insight or common error that loses marks.
 - Stay strictly inside the chapter scope shown in the transcript. Never drift into other chapters.
 - Prioritise the highest-weightage, most repeated question patterns for this chapter. Zero fluff.` },
-          { role: "user", content: `Generate 18-22 Previous Year Question style questions for the chapter "${chapterTitle}" in the style of ${examLabel}.
+          { role: "user", content: `Generate 18-22 Previous Year Questions for the chapter "${chapterTitle}" from ${examLabel} papers of the years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — these must be COMPLETELY NEW questions)" : ""}.
 Mix of:
 - 1-mark MCQs / very short answer / Assertion-Reason
 - 2-mark short answer
@@ -616,12 +629,13 @@ Mix of:
 - 5-mark long analytical answer
 - Case-based / data-interpretation sets where the exam uses them
 
-For each question include: year (e.g. "2023"), marks, question text, question type, sub-topic, and a step-by-step marking-scheme model answer with [N Mark] annotations.
+For each question include: year (within ${windowStart}-${windowEnd}), marks, question text, question type, sub-topic, and a step-by-step marking-scheme model answer with [N Mark] annotations.
 Order the questions from lowest marks to highest.
-
+${alreadyAsked.length ? `\nDo NOT repeat or paraphrase any of these already-shown questions:\n- ${alreadyAsked.join("\n- ")}\n` : ""}
 Reference video transcript (do not deviate from chapter scope):
-${(transcriptText || "").substring(0, 8000)}` }
+${(transcriptText || "").substring(0, 6000)}` }
         ],
+
         [{
           type: "function",
           function: {
