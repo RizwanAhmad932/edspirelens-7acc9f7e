@@ -201,9 +201,21 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
             ))}
           </div>
 
-          <Button variant="outline" size="sm" onClick={handleGenerate} className="w-full">
-            Regenerate paper
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="gap-2 gradient-primary text-primary-foreground"
+            >
+              {loadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              More PYQs
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleGenerate} disabled={loading || loadingMore}>
+              Regenerate paper
+            </Button>
+          </div>
+
         </>
       )}
     </div>
