@@ -268,12 +268,15 @@ function buildFallbackFlashcards(transcript: TranscriptSegment[]): Flashcard[] {
 }
 
 export async function generateInfographic(chapterTitle: string, summary: string[]): Promise<string> {
-  const { data, error } = await supabase.functions.invoke("analyze-video", {
-    body: { videoUrl: "", action: "generate-infographic", chapterTitle, summary },
+  const seed = chapterTitle + "|" + (summary || []).join("|");
+  return cached("infographic", seed, async () => {
+    const { data, error } = await supabase.functions.invoke("analyze-video", {
+      body: { videoUrl: "", action: "generate-infographic", chapterTitle, summary },
+    });
+    if (error) throw new Error(error.message || "Failed to generate infographic");
+    if (data?.error) throw new Error(data.message || data.error);
+    return data.imageUrl as string;
   });
-  if (error) throw new Error(error.message || "Failed to generate infographic");
-  if (data?.error) throw new Error(data.message || data.error);
-  return data.imageUrl;
 }
 
 export async function generatePYQ(
