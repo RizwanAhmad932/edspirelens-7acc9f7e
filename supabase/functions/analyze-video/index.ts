@@ -122,7 +122,7 @@ async function getVideoTitle(videoId: string): Promise<string> {
 // Model routing: "fast" for high-volume/simple generation, "deep" for
 // exam-accuracy critical work (quiz, PYQ, board notes, diagram MCQs).
 const MODELS = {
-  fast: "google/gemini-3.6-flash",
+  fast: "google/gemini-3.7-flash",
   deep: "openai/gpt-5.6-sol",
 } as const;
 
@@ -168,6 +168,8 @@ async function aiCall(
   if (toolChoice) body.tool_choice = toolChoice;
   // Low temperature = far fewer factual slips on structured study material.
   if (!model.startsWith("openai/")) body.temperature = 0.2;
+  // Priority serving tier — noticeably lower latency for the Gemini fast tier.
+  if (model.startsWith("google/gemini-3")) body.service_tier = "priority";
   // GPT-5.6 chat-completions requires reasoning to be off when tools are used.
   if (model.startsWith("openai/gpt-5.6")) body.reasoning_effort = "none";
 
@@ -591,7 +593,7 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
       if (!chapterTitle) return new Response(JSON.stringify({ error: "chapterTitle required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const examLabel = exam || board || "CBSE Board";
-      const pyqResp = await aiCallDeep(
+      const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You are an expert ${examLabel} exam analyst with the full past-paper archive memorised. You reproduce Previous Year Question (PYQ)-style questions in the EXACT wording style, format, marking scheme and difficulty of past ${examLabel} papers.
@@ -718,11 +720,11 @@ ${transcriptText.substring(0, 20000)}`,
       const { chapterTitle, transcript: transcriptText } = body;
       if (!transcriptText) return new Response(JSON.stringify({ error: "transcript required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      const tnResp = await aiCallDeep(
+      const tnResp = await aiCall(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
-          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, and 2-6 bullet points exactly as the teacher would write them. Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 20000)}` }
+          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, and 2-6 bullet points exactly as the teacher would write them. Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
         ],
         [{
           type: "function",
@@ -811,7 +813,7 @@ RULES:
 - 6-10 key terms with one-line, textbook-precise definitions.
 - 2-4 memory mnemonics/tricks and 3-5 common mistakes students make in exams on this topic.
 - Only use content actually present in the transcript. Never invent formulas.` },
-          { role: "user", content: `Create a SHORT NOTES revision cheat-sheet for "${chapterTitle}" that a student can revise in under 5 minutes before an exam. Include keyPoints, formulas, keyTerms, mnemonics, commonMistakes and one rememberTip.\n\nTranscript:\n${transcriptText.substring(0, 20000)}` }
+          { role: "user", content: `Create a SHORT NOTES revision cheat-sheet for "${chapterTitle}" that a student can revise in under 5 minutes before an exam. Include keyPoints, formulas, keyTerms, mnemonics, commonMistakes and one rememberTip.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
         ],
         [{
           type: "function",
@@ -853,21 +855,14 @@ RULES:
       const examLabel = exam || "NEET/Board";
       const imgPrompt = `Create a clean, labeled scientific/educational diagram for the chapter "${chapterTitle}" in the style of ${examLabel} exam textbooks.\n- White background, crisp lines, scientifically accurate\n- Label 5 key parts with letters A, B, C, D, E in small circles connected by thin lines\n- Single clear textbook-style diagram, no decoration\n\nChapter context: ${(transcriptText || "").substring(0, 1500)}`;
 
-      const imgResp = await aiImageCall(LOVABLE_API_KEY, imgPrompt);
-      if (!imgResp.ok) {
-        const errResp = handleAIError(imgResp);
-        if (errResp) return errResp;
-        throw new Error(`Image AI error: ${imgResp.status}`);
-      }
-      const imgData = await imgResp.json();
-      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (!imageUrl) throw new Error("No diagram image returned");
+      // Diagram image and its MCQs are independent — run them in parallel.
+      const imgPromise = aiImageCall(LOVABLE_API_KEY, imgPrompt);
 
-      const qResp = await aiCallDeep(
+      const qResp = await aiCall(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You write diagram-based labeling MCQs in the exact style of ${examLabel} exams. Exactly one option is correct, the other three are anatomically/scientifically plausible distractors from the same diagram family. Add a one-line explanation of the correct part's function or identity.` },
-          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E, e.g. "The part labeled A in the diagram is:" with 4 plausible options and an explanation.\n\nChapter context:\n${(transcriptText || "").substring(0, 8000)}` }
+          { role: "user", content: `Generate 5 diagram-labeling MCQs for chapter "${chapterTitle}". One question per label A, B, C, D, E, e.g. "The part labeled A in the diagram is:" with 4 plausible options and an explanation.\n\nChapter context:\n${(transcriptText || "").substring(0, 4000)}` }
         ],
         [{
           type: "function",
@@ -907,6 +902,17 @@ RULES:
         throw new Error(`AI error: ${qResp.status}`);
       }
       const quiz = parseToolResponse(await qResp.json());
+
+      const imgResp = await imgPromise;
+      if (!imgResp.ok) {
+        const errResp = handleAIError(imgResp);
+        if (errResp) return errResp;
+        throw new Error(`Image AI error: ${imgResp.status}`);
+      }
+      const imgData = await imgResp.json();
+      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!imageUrl) throw new Error("No diagram image returned");
+
       return new Response(JSON.stringify({ imageUrl, ...quiz }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -946,7 +952,7 @@ RULES:
         .sort((a, b) => a.accuracy - b.accuracy)
         .slice(0, 12);
 
-      const rpResp = await aiCallDeep(
+      const rpResp = await aiCall(
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You are an exam coach who builds precise, realistic daily revision plans.
