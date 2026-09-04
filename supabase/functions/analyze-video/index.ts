@@ -607,33 +607,16 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert ${examLabel} exam analyst with the complete ${earliestYear}-${latestYear} past-paper archive (39 years) memorised. You reproduce Previous Year Questions (PYQs) in the EXACT wording style, format, marking scheme and difficulty of real past ${examLabel} papers.
-
+          { role: "system", content: `You are an expert ${examLabel} exam analyst with the ${earliestYear}-${latestYear} past-paper archive memorised. Reproduce authentic PYQs in the exact wording, pattern and marking scheme of real ${examLabel} papers.
 RULES:
-- Difficulty target: Advanced / Hard. No trivial recall unless the paper itself carries 1-mark recall items.
-- Tag every question with a real, plausible paper year between ${earliestYear} and ${latestYear}, plus its question type (MCQ / Assertion-Reason / Case-Based / Very Short / Short / Long Analytical / Numerical).
-- For JEE Main / JEE Advanced / NEET / UPSC use that exam's authentic paper pattern (4-option MCQs, integer/numerical-value questions, statement-based and matching sets, negative-marking notes where applicable).
-- For CBSE / ICSE / State Board use the board's official marking-scheme format.
-- Model answers are official-style marking schemes, written step by step:
-  Step 1 ... [1 Mark] / Formula: ... [1 Mark] / Substitution & unit-correct final answer [1 Mark].
-  For an N-mark question show exactly where each of the N marks is awarded and note where partial credit applies.
-- Use LaTeX-style notation for all equations, symbols and SI units (e.g. \\frac{1}{2}mv^2, \\mathrm{J\\,kg^{-1}\\,K^{-1}}).
-- Add, in one short line at the end of the answer, the examiner insight or common error that loses marks.
-- Stay strictly inside the chapter scope shown in the transcript. Never drift into other chapters.
-- Prioritise the highest-weightage, most repeated question patterns for this chapter. Zero fluff.` },
-          { role: "user", content: `Generate 18-22 Previous Year Questions for the chapter "${chapterTitle}" from ${examLabel} papers of the years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — these must be COMPLETELY NEW questions)" : ""}.
-Mix of:
-- 1-mark MCQs / very short answer / Assertion-Reason
-- 2-mark short answer
-- 3-mark questions (derivation or numerical)
-- 5-mark long analytical answer
-- Case-based / data-interpretation sets where the exam uses them
-
-For each question include: year (within ${windowStart}-${windowEnd}), marks, question text, question type, sub-topic, and a step-by-step marking-scheme model answer with [N Mark] annotations.
-Order the questions from lowest marks to highest.
-${alreadyAsked.length ? `\nDo NOT repeat or paraphrase any of these already-shown questions:\n- ${alreadyAsked.join("\n- ")}\n` : ""}
-Reference video transcript (do not deviate from chapter scope):
-${(transcriptText || "").substring(0, 6000)}` }
+- Advanced difficulty. Tag each question with a plausible year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
+- Model answer = concise step-by-step marking scheme with [N Mark] annotations, LaTeX for equations/SI units, and one short examiner-insight line.
+- Stay strictly inside the chapter scope. No fluff.` },
+          { role: "user", content: `Generate exactly 8 ${examLabel} PYQs for the chapter "${chapterTitle}" from years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — COMPLETELY NEW questions)" : ""}.
+Mix 1/2/3/5-mark items, ordered lowest to highest marks.
+${alreadyAsked.length ? `Do NOT repeat or paraphrase:\n- ${alreadyAsked.slice(-20).join("\n- ")}\n` : ""}
+Chapter scope (transcript excerpt):
+${(transcriptText || "").substring(0, 3500)}` }
         ],
 
         [{
