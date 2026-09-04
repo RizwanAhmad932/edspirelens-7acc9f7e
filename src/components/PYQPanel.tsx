@@ -72,6 +72,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
         toast.success(`+${fresh.length} more PYQs added`);
       }
       setPage(next);
+      prefetch(next + 1, [...questions, ...fresh].map((q) => q.question));
     } catch (e: any) {
       toast.error(e.message || "Failed to load more PYQs");
     } finally {
