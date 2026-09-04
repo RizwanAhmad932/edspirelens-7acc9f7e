@@ -30,6 +30,11 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
   const [filter, setFilter] = useState<number | "all">("all");
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
 
+  // Warm the next page in the background so "More PYQs" feels instant.
+  const prefetch = (nextPage: number, seen: string[]) => {
+    generatePYQ(chapterTitle, transcript, exam, nextPage, seen).catch(() => {});
+  };
+
   const handleGenerate = async () => {
     setLoading(true);
     try {
@@ -38,6 +43,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
       setPage(1);
       setRevealed({});
       setFilter("all");
+      prefetch(2, (data.questions || []).map((q) => q.question));
     } catch (e: any) {
       toast.error(e.message || "Failed to generate PYQs");
     } finally {
