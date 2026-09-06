@@ -7,6 +7,93 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/* ---------------- Real web browsing helpers ---------------- */
+
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+function stripTags(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Live DuckDuckGo search — returns title/url/snippet triples. */
+async function webSearch(query: string, limit = 6): Promise<{ title: string; url: string; snippet: string }[]> {
+  try {
+    const resp = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query), {
+      method: "GET",
+      headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+    });
+    if (!resp.ok) return [];
+    const html = await resp.text();
+    const results: { title: string; url: string; snippet: string }[] = [];
+    const blocks = html.split('class="result__body"').slice(1);
+    for (const b of blocks) {
+      const hrefM = b.match(/href="([^"]+)"/);
+      const titleM = b.match(/result__a[^>]*>([\s\S]*?)<\/a>/);
+      const snipM = b.match(/result__snippet[^>]*>([\s\S]*?)<\/a>/);
+      let url = hrefM ? hrefM[1] : "";
+      const uddg = url.match(/uddg=([^&]+)/);
+      if (uddg) url = decodeURIComponent(uddg[1]);
+      if (!url || !titleM) continue;
+      results.push({
+        title: stripTags(titleM[1]).slice(0, 160),
+        url,
+        snippet: snipM ? stripTags(snipM[1]).slice(0, 400) : "",
+      });
+      if (results.length >= limit) break;
+    }
+    return results;
+  } catch (e) {
+    console.error("webSearch failed", e);
+    return [];
+  }
+}
+
+/** Fetch and flatten one page of readable text (capped). */
+async function readPage(url: string, cap = 4000): Promise<string> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 7000);
+    const resp = await fetch(url, { headers: { "User-Agent": UA }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!resp.ok) return "";
+    const ct = resp.headers.get("content-type") || "";
+    if (!ct.includes("text/html") && !ct.includes("text/plain")) return "";
+    return stripTags(await resp.text()).slice(0, cap);
+  } catch { return ""; }
+}
+
+/** Search the live web and bring back readable research context. */
+async function browseResearch(queries: string[], pagesToRead = 2) {
+  const searches = await Promise.all(queries.map((q) => webSearch(q, 5)));
+  const seen = new Set<string>();
+  const hits: { title: string; url: string; snippet: string }[] = [];
+  for (const list of searches) {
+    for (const r of list) {
+      if (seen.has(r.url)) continue;
+      seen.add(r.url);
+      hits.push(r);
+    }
+  }
+  const pages = await Promise.all(hits.slice(0, pagesToRead).map((h) => readPage(h.url)));
+  const context = hits
+    .map((h, i) => `SOURCE ${i + 1}: ${h.title}\n${h.url}\n${h.snippet}${pages[i] ? "\nPAGE TEXT: " + pages[i] : ""}`)
+    .join("\n\n")
+    .slice(0, 12000);
+  return { sources: hits, context };
+}
+
+function slugKey(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
+}
+
+
 function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
