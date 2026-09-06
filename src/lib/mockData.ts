@@ -285,7 +285,7 @@ export async function generatePYQ(
   exam: string,
   page = 1,
   seenQuestions: string[] = [],
-): Promise<{ board: string; questions: PYQQuestion[] }> {
+): Promise<{ board: string; questions: PYQQuestion[]; sources?: { title: string; url: string }[] }> {
   const seed = chapterTitle + "|" + exam + "|p" + page + "|" + transcript.map((s) => s.text).join(" ");
   return cached("pyq", seed, async () => {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
@@ -301,7 +301,7 @@ export async function generatePYQ(
   });
   if (error) throw new Error(error.message || "Failed to generate PYQ");
   if (data?.error) throw new Error(data.message || data.error);
-  return data as { board: string; questions: PYQQuestion[] };
+  return data as { board: string; questions: PYQQuestion[]; sources?: { title: string; url: string }[] };
   });
 }
 
