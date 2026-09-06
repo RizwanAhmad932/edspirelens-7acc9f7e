@@ -227,6 +227,7 @@ GLOBAL QUALITY CONTRACT (applies to everything you produce):
 - STRUCTURE: clear hierarchy, precise headings, tight bullets, comparative contrasts where they aid recall.
 - NO FLUFF: no conversational filler, no introductions, no meta-commentary, no restating the prompt, no apologies.
 - SCHEMA: respect requested counts and JSON schema EXACTLY — no extra keys, no missing fields, no markdown fences inside JSON string values.
+- NEVER REFUSE: always attempt the task and return the most useful, complete answer you can. Never reply with "I can't", "not possible", "insufficient information" or an empty result. If the transcript is thin or unclear, reconstruct from the chapter/topic title using standard curriculum knowledge and still deliver the full requested structure and counts.
 - Keep technical terms in English even for Hinglish transcripts. Work in one pass: produce the final verified output immediately.`;
 
 function withRigor(messages: any[]) {
@@ -242,6 +243,43 @@ function withRigor(messages: any[]) {
   return out;
 }
 
+// Resilience chain: if the primary model is rate-limited, errors, or returns an
+// unusable/empty answer, we transparently hand the same task to a different AI
+// until one of them delivers. The student never gets a "can't do that".
+const FALLBACK_CHAIN: string[] = [
+  "google/gemini-3.7-flash",
+  "openai/gpt-5.6-terra",
+  "google/gemini-3.1-pro-preview",
+  "google/gemini-3.6-flash",
+  "openai/gpt-5.4-mini",
+  "google/gemini-3.1-flash-lite",
+];
+
+function buildBody(model: string, messages: any[], tools?: any[], toolChoice?: any) {
+  const body: any = { model, messages: withRigor(messages) };
+  if (tools) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
+  if (!model.startsWith("openai/")) body.temperature = 0.2;
+  if (model.startsWith("google/gemini-3")) body.service_tier = "priority";
+  if (model.startsWith("openai/gpt-5.6")) body.reasoning_effort = "none";
+  return body;
+}
+
+function shapedResponse(payload: any) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => payload,
+  } as unknown as Response;
+}
+
+function isUsable(payload: any) {
+  const msg = payload?.choices?.[0]?.message;
+  if (!msg) return false;
+  if (msg.tool_calls?.[0]?.function?.arguments) return true;
+  return typeof msg.content === "string" && msg.content.trim().length > 0;
+}
+
 async function aiCall(
   apiKey: string,
   messages: any[],
@@ -249,39 +287,59 @@ async function aiCall(
   toolChoice?: any,
   tier: keyof typeof MODELS = "fast",
 ) {
-  const model = MODELS[tier];
-  const body: any = { model, messages: withRigor(messages) };
-  if (tools) body.tools = tools;
-  if (toolChoice) body.tool_choice = toolChoice;
-  // Low temperature = far fewer factual slips on structured study material.
-  if (!model.startsWith("openai/")) body.temperature = 0.2;
-  // Priority serving tier — noticeably lower latency for the Gemini fast tier.
-  if (model.startsWith("google/gemini-3")) body.service_tier = "priority";
-  // GPT-5.6 chat-completions requires reasoning to be off when tools are used.
-  if (model.startsWith("openai/gpt-5.6")) body.reasoning_effort = "none";
+  const primary = MODELS[tier];
+  const chain = [primary, ...FALLBACK_CHAIN.filter((m) => m !== primary)];
 
-  const send = () =>
-    fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  let lastResp: Response | null = null;
 
-  let resp = await send();
-  // One backoff retry on transient upstream failures, then fall back to the
-  // fast model so a deep-tier hiccup never blocks the student.
-  if (resp.status === 429 || resp.status >= 500) {
-    await new Promise((r) => setTimeout(r, 1200));
-    resp = await send();
-    if ((resp.status === 429 || resp.status >= 500) && tier === "deep") {
-      body.model = MODELS.fast;
-      delete body.reasoning_effort;
-      body.temperature = 0.2;
-      resp = await send();
+  for (let i = 0; i < chain.length; i++) {
+    const model = chain[i];
+    const body = buildBody(model, messages, tools, toolChoice);
+
+    // Up to two attempts per model (one backoff retry on transient failures).
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let resp: Response;
+      try {
+        resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        console.error(`Network failure on ${model}:`, e);
+        break; // hand over to the next AI
+      }
+
+      if (resp.status === 402) return resp; // credits — no other model will help
+      if (resp.status === 429 || resp.status >= 500) {
+        lastResp = resp;
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 800));
+          continue;
+        }
+        break; // next model in the chain
+      }
+      if (!resp.ok) {
+        lastResp = resp;
+        console.error(`Model ${model} rejected the request (${resp.status})`);
+        break; // next model
+      }
+
+      let payload: any;
+      try {
+        payload = await resp.json();
+      } catch {
+        break;
+      }
+      if (isUsable(payload)) return shapedResponse(payload);
+      console.error(`Model ${model} returned an unusable answer — escalating`);
+      break; // next model
     }
   }
-  return resp;
+
+  return lastResp ?? shapedResponse({ choices: [{ message: { content: "" } }] });
 }
+
 
 /**
  * Deep tier — OpenAI reasoning model over the gateway Responses API (streamed,
