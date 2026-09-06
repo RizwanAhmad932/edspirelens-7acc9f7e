@@ -7,6 +7,93 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/* ---------------- Real web browsing helpers ---------------- */
+
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+function stripTags(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Live DuckDuckGo search — returns title/url/snippet triples. */
+async function webSearch(query: string, limit = 6): Promise<{ title: string; url: string; snippet: string }[]> {
+  try {
+    const resp = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query), {
+      method: "GET",
+      headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+    });
+    if (!resp.ok) return [];
+    const html = await resp.text();
+    const results: { title: string; url: string; snippet: string }[] = [];
+    const blocks = html.split('class="result__body"').slice(1);
+    for (const b of blocks) {
+      const hrefM = b.match(/href="([^"]+)"/);
+      const titleM = b.match(/result__a[^>]*>([\s\S]*?)<\/a>/);
+      const snipM = b.match(/result__snippet[^>]*>([\s\S]*?)<\/a>/);
+      let url = hrefM ? hrefM[1] : "";
+      const uddg = url.match(/uddg=([^&]+)/);
+      if (uddg) url = decodeURIComponent(uddg[1]);
+      if (!url || !titleM) continue;
+      results.push({
+        title: stripTags(titleM[1]).slice(0, 160),
+        url,
+        snippet: snipM ? stripTags(snipM[1]).slice(0, 400) : "",
+      });
+      if (results.length >= limit) break;
+    }
+    return results;
+  } catch (e) {
+    console.error("webSearch failed", e);
+    return [];
+  }
+}
+
+/** Fetch and flatten one page of readable text (capped). */
+async function readPage(url: string, cap = 4000): Promise<string> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 7000);
+    const resp = await fetch(url, { headers: { "User-Agent": UA }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!resp.ok) return "";
+    const ct = resp.headers.get("content-type") || "";
+    if (!ct.includes("text/html") && !ct.includes("text/plain")) return "";
+    return stripTags(await resp.text()).slice(0, cap);
+  } catch { return ""; }
+}
+
+/** Search the live web and bring back readable research context. */
+async function browseResearch(queries: string[], pagesToRead = 2) {
+  const searches = await Promise.all(queries.map((q) => webSearch(q, 5)));
+  const seen = new Set<string>();
+  const hits: { title: string; url: string; snippet: string }[] = [];
+  for (const list of searches) {
+    for (const r of list) {
+      if (seen.has(r.url)) continue;
+      seen.add(r.url);
+      hits.push(r);
+    }
+  }
+  const pages = await Promise.all(hits.slice(0, pagesToRead).map((h) => readPage(h.url)));
+  const context = hits
+    .map((h, i) => `SOURCE ${i + 1}: ${h.title}\n${h.url}\n${h.snippet}${pages[i] ? "\nPAGE TEXT: " + pages[i] : ""}`)
+    .join("\n\n")
+    .slice(0, 12000);
+  return { sources: hits, context };
+}
+
+function slugKey(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
+}
+
+
 function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -603,20 +690,46 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
       const windowEnd = Math.max(earliestYear, sliceStart);
       const windowStart = Math.max(earliestYear, sliceStart - (sliceSpan - 1));
       const alreadyAsked: string[] = Array.isArray(seenQuestions) ? seenQuestions.slice(-40) : [];
+      const chapterKey = slugKey(chapterTitle);
+
+      // 1) Shared question bank — instant response for anything already searched.
+      const { data: cachedRow } = await supabase
+        .from("pyq_bank")
+        .select("questions, sources")
+        .eq("exam", examLabel)
+        .eq("chapter_key", chapterKey)
+        .eq("page", page)
+        .maybeSingle();
+      if (cachedRow?.questions && Array.isArray(cachedRow.questions) && cachedRow.questions.length) {
+        return new Response(
+          JSON.stringify({ board: examLabel, questions: cachedRow.questions, sources: cachedRow.sources || [], cached: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 2) Live internet research — real past papers from the open web.
+      const research = await browseResearch([
+        `${examLabel} previous year questions ${chapterTitle} ${windowStart}-${windowEnd} with solutions`,
+        `${examLabel} ${chapterTitle} past paper questions marking scheme pdf`,
+      ], 2);
 
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert ${examLabel} exam analyst with the ${earliestYear}-${latestYear} past-paper archive memorised. Reproduce authentic PYQs in the exact wording, pattern and marking scheme of real ${examLabel} papers.
+          { role: "system", content: `You are an expert ${examLabel} exam analyst with live web research in front of you. Reproduce authentic PYQs in the exact wording, pattern and marking scheme of real ${examLabel} papers.
 RULES:
-- Advanced difficulty. Tag each question with a plausible year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
+- PREFER questions evidenced in the WEB RESEARCH block; only fall back to archive knowledge when research is thin.
+- Advanced difficulty. Tag each question with year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
 - Model answer = concise step-by-step marking scheme with [N Mark] annotations, LaTeX for equations/SI units, and one short examiner-insight line.
 - Stay strictly inside the chapter scope. No fluff.` },
           { role: "user", content: `Generate exactly 8 ${examLabel} PYQs for the chapter "${chapterTitle}" from years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — COMPLETELY NEW questions)" : ""}.
 Mix 1/2/3/5-mark items, ordered lowest to highest marks.
 ${alreadyAsked.length ? `Do NOT repeat or paraphrase:\n- ${alreadyAsked.slice(-20).join("\n- ")}\n` : ""}
+WEB RESEARCH (live internet):
+${research.context || "(no results — use your archive knowledge)"}
+
 Chapter scope (transcript excerpt):
-${(transcriptText || "").substring(0, 3500)}` }
+${(transcriptText || "").substring(0, 3000)}` }
         ],
 
         [{
@@ -659,7 +772,21 @@ ${(transcriptText || "").substring(0, 3500)}` }
         throw new Error(`AI error: ${pyqResp.status}`);
       }
       const pyq = parseToolResponse(await pyqResp.json());
-      return new Response(JSON.stringify(pyq), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const sources = research.sources.slice(0, 6).map((s) => ({ title: s.title, url: s.url }));
+
+      // 3) Store in the shared bank so every future request is instant.
+      if (Array.isArray(pyq?.questions) && pyq.questions.length) {
+        await supabase.from("pyq_bank").upsert({
+          exam: examLabel,
+          chapter_key: chapterKey,
+          chapter_title: chapterTitle,
+          page,
+          questions: pyq.questions,
+          sources,
+        }, { onConflict: "exam,chapter_key,page" });
+      }
+
+      return new Response(JSON.stringify({ ...pyq, sources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "generate-flashcards") {

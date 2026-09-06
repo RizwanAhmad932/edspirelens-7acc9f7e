@@ -29,6 +29,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
   const [questions, setQuestions] = useState<PYQQuestion[]>([]);
   const [filter, setFilter] = useState<number | "all">("all");
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [sources, setSources] = useState<{ title: string; url: string }[]>([]);
 
   // Warm the next page in the background so "More PYQs" feels instant.
   const prefetch = (nextPage: number, seen: string[]) => {
@@ -40,6 +41,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
     try {
       const data = await generatePYQ(chapterTitle, transcript, exam, 1);
       setQuestions(data.questions || []);
+      setSources(data.sources || []);
       setPage(1);
       setRevealed({});
       setFilter("all");
@@ -69,6 +71,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
         toast.info("No further unseen questions in the archive for this chapter.");
       } else {
         setQuestions((prev) => [...prev, ...fresh]);
+        setSources((prev) => [...prev, ...(data.sources || [])].slice(0, 8));
         toast.success(`+${fresh.length} more PYQs added`);
       }
       setPage(next);
@@ -137,14 +140,14 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
       </div>
 
       <p className="text-[9px] font-mono-hud uppercase tracking-wider text-muted-foreground">
-        39-year archive{yearsCovered.length ? ` · ${yearsCovered[0]}–${yearsCovered[yearsCovered.length - 1]} loaded` : ""}
+        Live web search · 39-year archive{yearsCovered.length ? ` · ${yearsCovered[0]}–${yearsCovered[yearsCovered.length - 1]} loaded` : ""}
       </p>
 
 
       {questions.length === 0 && !loading && (
         <div className="text-center py-6 space-y-3">
           <p className="text-xs text-muted-foreground">
-            Marking-scheme accurate past-paper questions for this chapter.
+            Searched live from the internet and saved in the app, so repeat lookups are instant.
           </p>
           <Button size="sm" onClick={handleGenerate} className="gap-2 gradient-primary text-primary-foreground">
             <Sparkles className="h-3.5 w-3.5" /> Generate {exam} PYQs
@@ -207,6 +210,23 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
               </div>
             ))}
           </div>
+
+          {sources.length > 0 && (
+            <div className="rounded-xl border border-foreground/[0.07] bg-secondary/20 p-3 space-y-1">
+              <p className="text-[9px] font-mono-hud uppercase tracking-wider text-muted-foreground">Web sources</p>
+              {sources.slice(0, 6).map((s, i) => (
+                <a
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="block text-[11px] text-accent truncate hover:underline"
+                >
+                  {s.title || s.url}
+                </a>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Button

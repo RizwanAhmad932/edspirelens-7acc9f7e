@@ -289,6 +289,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pyq_bank: {
+        Row: {
+          chapter_key: string
+          chapter_title: string
+          created_at: string
+          exam: string
+          id: string
+          page: number
+          questions: Json
+          sources: Json
+        }
+        Insert: {
+          chapter_key: string
+          chapter_title: string
+          created_at?: string
+          exam: string
+          id?: string
+          page?: number
+          questions?: Json
+          sources?: Json
+        }
+        Update: {
+          chapter_key?: string
+          chapter_title?: string
+          created_at?: string
+          exam?: string
+          id?: string
+          page?: number
+          questions?: Json
+          sources?: Json
+        }
+        Relationships: []
+      }
       quiz_attempts: {
         Row: {
           analysis_id: string | null
