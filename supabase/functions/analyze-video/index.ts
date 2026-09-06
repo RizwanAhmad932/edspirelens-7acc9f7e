@@ -690,20 +690,46 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
       const windowEnd = Math.max(earliestYear, sliceStart);
       const windowStart = Math.max(earliestYear, sliceStart - (sliceSpan - 1));
       const alreadyAsked: string[] = Array.isArray(seenQuestions) ? seenQuestions.slice(-40) : [];
+      const chapterKey = slugKey(chapterTitle);
+
+      // 1) Shared question bank — instant response for anything already searched.
+      const { data: cachedRow } = await supabase
+        .from("pyq_bank")
+        .select("questions, sources")
+        .eq("exam", examLabel)
+        .eq("chapter_key", chapterKey)
+        .eq("page", page)
+        .maybeSingle();
+      if (cachedRow?.questions && Array.isArray(cachedRow.questions) && cachedRow.questions.length) {
+        return new Response(
+          JSON.stringify({ board: examLabel, questions: cachedRow.questions, sources: cachedRow.sources || [], cached: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 2) Live internet research — real past papers from the open web.
+      const research = await browseResearch([
+        `${examLabel} previous year questions ${chapterTitle} ${windowStart}-${windowEnd} with solutions`,
+        `${examLabel} ${chapterTitle} past paper questions marking scheme pdf`,
+      ], 2);
 
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
         [
-          { role: "system", content: `You are an expert ${examLabel} exam analyst with the ${earliestYear}-${latestYear} past-paper archive memorised. Reproduce authentic PYQs in the exact wording, pattern and marking scheme of real ${examLabel} papers.
+          { role: "system", content: `You are an expert ${examLabel} exam analyst with live web research in front of you. Reproduce authentic PYQs in the exact wording, pattern and marking scheme of real ${examLabel} papers.
 RULES:
-- Advanced difficulty. Tag each question with a plausible year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
+- PREFER questions evidenced in the WEB RESEARCH block; only fall back to archive knowledge when research is thin.
+- Advanced difficulty. Tag each question with year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
 - Model answer = concise step-by-step marking scheme with [N Mark] annotations, LaTeX for equations/SI units, and one short examiner-insight line.
 - Stay strictly inside the chapter scope. No fluff.` },
           { role: "user", content: `Generate exactly 8 ${examLabel} PYQs for the chapter "${chapterTitle}" from years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — COMPLETELY NEW questions)" : ""}.
 Mix 1/2/3/5-mark items, ordered lowest to highest marks.
 ${alreadyAsked.length ? `Do NOT repeat or paraphrase:\n- ${alreadyAsked.slice(-20).join("\n- ")}\n` : ""}
+WEB RESEARCH (live internet):
+${research.context || "(no results — use your archive knowledge)"}
+
 Chapter scope (transcript excerpt):
-${(transcriptText || "").substring(0, 3500)}` }
+${(transcriptText || "").substring(0, 3000)}` }
         ],
 
         [{
@@ -746,7 +772,21 @@ ${(transcriptText || "").substring(0, 3500)}` }
         throw new Error(`AI error: ${pyqResp.status}`);
       }
       const pyq = parseToolResponse(await pyqResp.json());
-      return new Response(JSON.stringify(pyq), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const sources = research.sources.slice(0, 6).map((s) => ({ title: s.title, url: s.url }));
+
+      // 3) Store in the shared bank so every future request is instant.
+      if (Array.isArray(pyq?.questions) && pyq.questions.length) {
+        await supabase.from("pyq_bank").upsert({
+          exam: examLabel,
+          chapter_key: chapterKey,
+          chapter_title: chapterTitle,
+          page,
+          questions: pyq.questions,
+          sources,
+        }, { onConflict: "exam,chapter_key,page" });
+      }
+
+      return new Response(JSON.stringify({ ...pyq, sources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "generate-flashcards") {
