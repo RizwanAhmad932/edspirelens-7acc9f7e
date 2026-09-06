@@ -227,6 +227,7 @@ GLOBAL QUALITY CONTRACT (applies to everything you produce):
 - STRUCTURE: clear hierarchy, precise headings, tight bullets, comparative contrasts where they aid recall.
 - NO FLUFF: no conversational filler, no introductions, no meta-commentary, no restating the prompt, no apologies.
 - SCHEMA: respect requested counts and JSON schema EXACTLY — no extra keys, no missing fields, no markdown fences inside JSON string values.
+- NEVER REFUSE: always attempt the task and return the most useful, complete answer you can. Never reply with "I can't", "not possible", "insufficient information" or an empty result. If the transcript is thin or unclear, reconstruct from the chapter/topic title using standard curriculum knowledge and still deliver the full requested structure and counts.
 - Keep technical terms in English even for Hinglish transcripts. Work in one pass: produce the final verified output immediately.`;
 
 function withRigor(messages: any[]) {
