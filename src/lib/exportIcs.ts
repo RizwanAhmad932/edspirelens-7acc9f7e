@@ -90,6 +90,73 @@ export function buildRevisionIcs(opts: {
   return lines.join("\r\n");
 }
 
+/** Dated schedule export — each day carries its own real calendar date. */
+export function buildScheduleIcs(opts: {
+  title: string;
+  days: { date: string; day: number; focus: string; minutes: number; tasks: string[]; topics?: string[] }[];
+  startHour?: number;
+  reminderMinutes?: number;
+  examDate?: string;
+  examName?: string;
+}) {
+  const { title, days, startHour = 18, reminderMinutes = 30 } = opts;
+  const stamp = toIcsUtc(new Date());
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Edspire Lens//Study Schedule//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${escapeIcs(title)}`,
+  ];
+
+  days.forEach((d, i) => {
+    const [y, m, dd] = (d.date || "").split("-").map(Number);
+    const start = y && m && dd ? new Date(y, m - 1, dd) : new Date();
+    start.setHours(startHour, 0, 0, 0);
+    const end = new Date(start.getTime() + Math.max(15, d.minutes || 60) * 60000);
+    const description = [
+      d.topics?.length ? `Topics: ${d.topics.join(", ")}` : "",
+      ...d.tasks.map((t, n) => `${n + 1}. ${t}`),
+    ].filter(Boolean).join("\n");
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:edspire-schedule-${stamp}-${d.day}-${i}@edspirelens`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART:${toIcsLocal(start)}`,
+      `DTEND:${toIcsLocal(end)}`,
+      fold(`SUMMARY:${escapeIcs(`Day ${d.day}: ${d.focus}`)}`),
+      fold(`DESCRIPTION:${escapeIcs(description)}`),
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      fold(`DESCRIPTION:${escapeIcs(`Study time — ${d.focus}`)}`),
+      `TRIGGER:-PT${Math.max(0, reminderMinutes)}M`,
+      "END:VALARM",
+      "END:VEVENT",
+    );
+  });
+
+  if (opts.examDate) {
+    const [y, m, dd] = opts.examDate.split("-").map(Number);
+    if (y && m && dd) {
+      const ex = new Date(y, m - 1, dd);
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:edspire-exam-${stamp}@edspirelens`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${y}${pad(m)}${pad(dd)}`,
+        `DTEND;VALUE=DATE:${y}${pad(m)}${pad(dd)}`,
+        fold(`SUMMARY:${escapeIcs(`${opts.examName || "Exam"} — exam day`)}`),
+        "END:VEVENT",
+      );
+      void ex;
+    }
+  }
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
 export function downloadIcs(filename: string, ics: string) {
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
