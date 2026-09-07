@@ -1202,6 +1202,116 @@ RULES:
       return new Response(JSON.stringify(plan), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "study-schedule") {
+      const { days, exam: rawExam } = body;
+      const planDays = Math.min(Math.max(Number(days) || 14, 3), 30);
+      const examLabel = rawExam || "CBSE Board";
+      const today = new Date();
+      const todayIso = today.toISOString().slice(0, 10);
+
+      // 1) Live web lookup of the real exam calendar.
+      const research = await browseResearch([
+        `${examLabel} ${today.getFullYear()} ${today.getFullYear() + 1} exam date sheet official schedule`,
+        `${examLabel} exam date announcement official notification`,
+      ], 2);
+
+      // 2) What the student has actually studied + where they are weak.
+      const [{ data: analyses }, { data: attempts }] = await Promise.all([
+        supabase.from("video_analyses").select("video_title, summary, created_at")
+          .eq("user_id", userId).order("created_at", { ascending: false }).limit(25),
+        supabase.from("quiz_attempts").select("topic, video_title, is_correct")
+          .eq("user_id", userId).order("created_at", { ascending: false }).limit(300),
+      ]);
+
+      const byTopic: Record<string, { total: number; wrong: number }> = {};
+      for (const r of (attempts || []) as any[]) {
+        const t = r.topic || r.video_title || "General";
+        byTopic[t] ??= { total: 0, wrong: 0 };
+        byTopic[t].total++;
+        if (!r.is_correct) byTopic[t].wrong++;
+      }
+      const perf = Object.entries(byTopic)
+        .map(([topic, v]) => ({ topic, accuracy: Math.round(((v.total - v.wrong) / v.total) * 100), total: v.total }))
+        .sort((a, b) => a.accuracy - b.accuracy).slice(0, 15);
+
+      const watched = ((analyses || []) as any[]).map((a) =>
+        `- ${a.video_title}${Array.isArray(a.summary) && a.summary.length ? ": " + a.summary.slice(0, 2).join(" ") : ""}`
+      ).join("\n").slice(0, 3000);
+
+      const schedResp = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You are an exam-planning coach. Build a dated, day-by-day study schedule anchored to the REAL exam calendar found in the web research.
+RULES:
+- Read the WEB RESEARCH block and extract the true next ${examLabel} exam date (ISO YYYY-MM-DD). If sources disagree or are missing, give your best-supported estimate and lower the confidence score.
+- Dates start at ${todayIso} and run consecutively for ${planDays} days.
+- Back-load revision: heavy new-concept work early, PYQ practice and mock drills nearer the exam, light recall + rest the last two days before it.
+- Each day maps to 1-3 concrete topics taken from the student's watched videos and weak topics. Never invent unrelated topics.
+- Every day lists concrete tasks (45-120 min total) and names which material to pull: pyq, flashcards, notes.
+- confidence = 0-100 how reliable this day's plan and the exam date are.` },
+          { role: "user", content: `Exam: ${examLabel}. Today: ${todayIso}. Plan length: ${planDays} days.
+
+WEB RESEARCH (live internet):
+${research.context || "(no results — estimate from typical exam calendar)"}
+
+Videos studied:
+${watched || "(none yet — build a foundation plan for this exam)"}
+
+Topic performance:
+${perf.map((p) => `- ${p.topic}: ${p.accuracy}% over ${p.total} questions`).join("\n") || "(no quiz data yet)"}` },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_schedule",
+            description: "Return a dated study schedule",
+            parameters: {
+              type: "object",
+              properties: {
+                exam: { type: "string" },
+                examDate: { type: "string", description: "ISO date YYYY-MM-DD of next exam" },
+                examDateConfidence: { type: "number" },
+                headline: { type: "string" },
+                days: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      date: { type: "string" },
+                      day: { type: "number" },
+                      focus: { type: "string" },
+                      minutes: { type: "number" },
+                      topics: { type: "array", items: { type: "string" } },
+                      tasks: { type: "array", items: { type: "string" } },
+                      materials: { type: "array", items: { type: "string" }, description: "any of: pyq, flashcards, notes" },
+                      confidence: { type: "number" },
+                    },
+                    required: ["date", "day", "focus", "minutes", "topics", "tasks", "materials", "confidence"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["exam", "examDate", "examDateConfidence", "headline", "days"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_schedule" } },
+      );
+
+      if (!schedResp.ok) {
+        const errResp = handleAIError(schedResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${schedResp.status}`);
+      }
+      const schedule = parseToolResponse(await schedResp.json());
+      const sources = research.sources.slice(0, 6).map((s) => ({ title: s.title, url: s.url }));
+      // Ground the confidence in whether real sources actually backed the lookup.
+      const sourceBoost = sources.length >= 3 ? 0 : sources.length ? -10 : -25;
+      schedule.examDateConfidence = Math.max(5, Math.min(99, Math.round((schedule.examDateConfidence || 60) + sourceBoost)));
+      return new Response(JSON.stringify({ ...schedule, sources }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("Edge function error:", e);
