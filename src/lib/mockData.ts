@@ -140,6 +140,35 @@ export interface RevisionPlan {
   weeklyGoal: string;
 }
 
+export interface ScheduleDay {
+  date: string;
+  day: number;
+  focus: string;
+  minutes: number;
+  topics: string[];
+  tasks: string[];
+  materials: string[];
+  confidence: number;
+}
+
+export interface StudySchedule {
+  exam: string;
+  examDate: string;
+  examDateConfidence: number;
+  headline: string;
+  days: ScheduleDay[];
+  sources?: { title: string; url: string }[];
+}
+
+export async function generateStudySchedule(exam: string, days = 14): Promise<StudySchedule> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: { videoUrl: "", action: "study-schedule", exam, days },
+  });
+  if (error) throw new Error(error.message || "Failed to build study schedule");
+  if (data?.error) throw new Error(data.message || data.error);
+  return data as StudySchedule;
+}
+
 export async function generateRevisionPlan(days = 7): Promise<RevisionPlan> {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
     body: { videoUrl: "", action: "generate-revision-plan", days },
