@@ -13,6 +13,7 @@ const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"), "ResetPas
 const Profile = lazyRetry(() => import("./pages/Profile"), "Profile");
 const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"), "AdminDashboard");
 const Analytics = lazyRetry(() => import("./pages/Analytics"), "Analytics");
+const StudySchedule = lazyRetry(() => import("./pages/StudySchedule"), "StudySchedule");
 const About = lazyRetry(() => import("./pages/About"), "About");
 const NotFound = lazyRetry(() => import("./pages/NotFound"), "NotFound");
 
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/schedule" element={<StudySchedule />} />
           <Route path="/about" element={<About />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

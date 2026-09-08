@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, Suspense, memo } from "react";
 import { lazyRetry } from "@/lib/lazyRetry";
-import { Sparkles, Loader2, LogOut, Shield, TrendingUp } from "lucide-react";
+import { Sparkles, Loader2, LogOut, Shield, TrendingUp, CalendarDays } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -226,6 +226,9 @@ const Index = () => {
                 <Shield className="h-4 w-4" />
               </Button>
             )}
+            <Button variant="ghost" size="icon" onClick={() => navigate("/schedule")} className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-accent" title="Study Schedule">
+              <CalendarDays className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/analytics")} className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-accent" title="Performance">
               <TrendingUp className="h-4 w-4" />
             </Button>
