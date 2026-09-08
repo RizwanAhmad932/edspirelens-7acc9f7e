@@ -925,7 +925,7 @@ ${transcriptText.substring(0, 20000)}`,
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
-          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, and 2-6 bullet points exactly as the teacher would write them. Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
+          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, 2-6 bullet points exactly as the teacher would write them, and confidence (0-100: how certain you are this section reflects what was actually written/said — lower it when the transcript is unclear). Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
         ],
         [{
           type: "function",
