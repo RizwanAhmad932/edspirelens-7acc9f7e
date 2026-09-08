@@ -656,7 +656,8 @@ ACCURACY RULES (non-negotiable):
 - Include exam-authentic advanced formats inside the MCQ shell: Assertion-Reason (A/R with the standard four options), Case-Based / data-interpretation stems, and numerical stems with units.
 - Use LaTeX-style notation for maths, symbols and SI units (e.g. v = u + at, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}).
 - explanation: 1-2 dense sentences giving the decisive reasoning step or formula, plus the misconception the distractors target. No filler.
-- topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.` },
+- topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.
+- confidence: 0-100 honest self-rating that the question is transcript-grounded and the marked answer is definitely correct. Use <60 when the transcript was unclear on this point.` },
           {
             role: "user",
             content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
@@ -682,7 +683,7 @@ ${transcriptText.substring(0, 35000)}`,
             parameters: {
               type: "object",
               properties: {
-                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" }, explanation: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] }, timestamp: { type: "string" } }, required: ["id", "question", "options", "correctIndex", "explanation", "topic", "difficulty", "timestamp"], additionalProperties: false } },
+                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" }, explanation: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] }, timestamp: { type: "string" }, confidence: { type: "number" } }, required: ["id", "question", "options", "correctIndex", "explanation", "topic", "difficulty", "timestamp", "confidence"], additionalProperties: false } },
               },
               required: ["questions"],
               additionalProperties: false,
@@ -779,6 +780,8 @@ RULES:
 - PREFER questions evidenced in the WEB RESEARCH block; only fall back to archive knowledge when research is thin.
 - Advanced difficulty. Tag each question with year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
 - Model answer = concise step-by-step marking scheme with [N Mark] annotations, LaTeX for equations/SI units, and one short examiner-insight line.
+- paper = the exact paper this came from (e.g. "CBSE 2019 Delhi Set-1", "JEE Main 2021 Shift-2 (24 Feb)"). sourceUrl = the research URL that evidences it, or "" if from archive knowledge.
+- confidence = 0-100 honest self-rating that this is a verbatim real past question with a correct model answer. Rate below 60 when you reconstructed it from memory.
 - Stay strictly inside the chapter scope. No fluff.` },
           { role: "user", content: `Generate exactly 8 ${examLabel} PYQs for the chapter "${chapterTitle}" from years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — COMPLETELY NEW questions)" : ""}.
 Mix 1/2/3/5-mark items, ordered lowest to highest marks.
@@ -810,8 +813,11 @@ ${(transcriptText || "").substring(0, 3000)}` }
                       answer: { type: "string" },
                       type: { type: "string" },
                       topic: { type: "string" },
+                      paper: { type: "string" },
+                      sourceUrl: { type: "string" },
+                      confidence: { type: "number" },
                     },
-                    required: ["year", "marks", "question", "answer", "type", "topic"],
+                    required: ["year", "marks", "question", "answer", "type", "topic", "paper", "sourceUrl", "confidence"],
                     additionalProperties: false,
                   },
                 },
@@ -831,6 +837,20 @@ ${(transcriptText || "").substring(0, 3000)}` }
       }
       const pyq = parseToolResponse(await pyqResp.json());
       const sources = research.sources.slice(0, 6).map((s) => ({ title: s.title, url: s.url }));
+
+      // Ground each question's confidence in whether a real source actually backs it.
+      const knownUrls = new Set(sources.map((s) => s.url));
+      if (Array.isArray(pyq?.questions)) {
+        pyq.questions = pyq.questions.map((q: any) => {
+          const backed = !!q.sourceUrl && knownUrls.has(q.sourceUrl);
+          let c = Number(q.confidence);
+          if (!Number.isFinite(c)) c = 65;
+          c = backed ? Math.min(99, c + 10) : Math.min(c, sources.length >= 3 ? 80 : 70);
+          return { ...q, confidence: Math.max(20, Math.round(c)), verified: backed };
+        });
+      }
+
+
 
       // 3) Store in the shared bank so every future request is instant.
       if (Array.isArray(pyq?.questions) && pyq.questions.length) {
@@ -906,7 +926,7 @@ ${transcriptText.substring(0, 20000)}`,
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
-          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, and 2-6 bullet points exactly as the teacher would write them. Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
+          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, 2-6 bullet points exactly as the teacher would write them, and confidence (0-100: how certain you are this section reflects what was actually written/said — lower it when the transcript is unclear). Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
         ],
         [{
           type: "function",
@@ -926,6 +946,7 @@ ${transcriptText.substring(0, 20000)}`,
                       bullets: { type: "array", items: { type: "string" } },
                       formula: { type: "string" },
                       diagram: { type: "string" },
+                      confidence: { type: "number" },
                     },
                     required: ["heading"],
                     additionalProperties: false,
