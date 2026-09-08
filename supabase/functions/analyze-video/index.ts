@@ -682,7 +682,7 @@ ${transcriptText.substring(0, 35000)}`,
             parameters: {
               type: "object",
               properties: {
-                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" }, explanation: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] }, timestamp: { type: "string" } }, required: ["id", "question", "options", "correctIndex", "explanation", "topic", "difficulty", "timestamp"], additionalProperties: false } },
+                questions: { type: "array", items: { type: "object", properties: { id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctIndex: { type: "number" }, explanation: { type: "string" }, topic: { type: "string" }, difficulty: { type: "string", enum: ["easy", "medium", "hard"] }, timestamp: { type: "string" }, confidence: { type: "number" } }, required: ["id", "question", "options", "correctIndex", "explanation", "topic", "difficulty", "timestamp", "confidence"], additionalProperties: false } },
               },
               required: ["questions"],
               additionalProperties: false,
