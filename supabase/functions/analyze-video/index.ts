@@ -779,6 +779,8 @@ RULES:
 - PREFER questions evidenced in the WEB RESEARCH block; only fall back to archive knowledge when research is thin.
 - Advanced difficulty. Tag each question with year (${earliestYear}-${latestYear}), marks, type (MCQ / Assertion-Reason / Case-Based / Short / Long / Numerical) and sub-topic.
 - Model answer = concise step-by-step marking scheme with [N Mark] annotations, LaTeX for equations/SI units, and one short examiner-insight line.
+- paper = the exact paper this came from (e.g. "CBSE 2019 Delhi Set-1", "JEE Main 2021 Shift-2 (24 Feb)"). sourceUrl = the research URL that evidences it, or "" if from archive knowledge.
+- confidence = 0-100 honest self-rating that this is a verbatim real past question with a correct model answer. Rate below 60 when you reconstructed it from memory.
 - Stay strictly inside the chapter scope. No fluff.` },
           { role: "user", content: `Generate exactly 8 ${examLabel} PYQs for the chapter "${chapterTitle}" from years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — COMPLETELY NEW questions)" : ""}.
 Mix 1/2/3/5-mark items, ordered lowest to highest marks.
