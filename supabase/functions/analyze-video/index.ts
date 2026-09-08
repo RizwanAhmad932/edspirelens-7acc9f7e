@@ -837,6 +837,20 @@ ${(transcriptText || "").substring(0, 3000)}` }
       const pyq = parseToolResponse(await pyqResp.json());
       const sources = research.sources.slice(0, 6).map((s) => ({ title: s.title, url: s.url }));
 
+      // Ground each question's confidence in whether a real source actually backs it.
+      const knownUrls = new Set(sources.map((s) => s.url));
+      if (Array.isArray(pyq?.questions)) {
+        pyq.questions = pyq.questions.map((q: any) => {
+          const backed = !!q.sourceUrl && knownUrls.has(q.sourceUrl);
+          let c = Number(q.confidence);
+          if (!Number.isFinite(c)) c = 65;
+          c = backed ? Math.min(99, c + 10) : Math.min(c, sources.length >= 3 ? 80 : 70);
+          return { ...q, confidence: Math.max(20, Math.round(c)), verified: backed };
+        });
+      }
+
+
+
       // 3) Store in the shared bank so every future request is instant.
       if (Array.isArray(pyq?.questions) && pyq.questions.length) {
         await supabase.from("pyq_bank").upsert({
