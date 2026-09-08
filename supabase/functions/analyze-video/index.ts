@@ -656,7 +656,8 @@ ACCURACY RULES (non-negotiable):
 - Include exam-authentic advanced formats inside the MCQ shell: Assertion-Reason (A/R with the standard four options), Case-Based / data-interpretation stems, and numerical stems with units.
 - Use LaTeX-style notation for maths, symbols and SI units (e.g. v = u + at, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}).
 - explanation: 1-2 dense sentences giving the decisive reasoning step or formula, plus the misconception the distractors target. No filler.
-- topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.` },
+- topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.
+- confidence: 0-100 honest self-rating that the question is transcript-grounded and the marked answer is definitely correct. Use <60 when the transcript was unclear on this point.` },
           {
             role: "user",
             content: `Generate EXACTLY ${targetCount} questions STRICTLY from this video transcript. Include:
