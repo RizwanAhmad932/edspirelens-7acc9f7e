@@ -12,6 +12,7 @@ import {
   StudySchedule as Schedule, ScheduleDay, PYQQuestion, Flashcard, ShortNotes,
 } from "@/lib/mockData";
 import { buildScheduleIcs, downloadIcs } from "@/lib/exportIcs";
+import { saveExamTarget } from "@/lib/examTarget";
 
 const EXAMS = ["CBSE Board", "ICSE Board", "State Board", "JEE Main", "JEE Advanced", "NEET", "UPSC"];
 
@@ -55,6 +56,10 @@ const StudySchedulePage = () => {
     try {
       const s = await generateStudySchedule(exam, days);
       setSchedule(s);
+      setPlan({});
+      if (s.examDate) {
+        saveExamTarget({ exam: s.exam || exam, examDate: s.examDate, confidence: s.examDateConfidence });
+      }
     } catch (e: any) {
       toast.error(e.message || "Could not build your schedule");
     } finally {
