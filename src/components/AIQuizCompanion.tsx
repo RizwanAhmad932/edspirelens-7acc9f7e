@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, X, Timer, Flame, BellOff, Bell, Target, Lightbulb, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion, TranscriptSegment } from "@/lib/mockData";
+import { getExamTarget, daysUntilExam, examUrgencyFactor } from "@/lib/examTarget";
 
 interface Props {
   quiz: QuizQuestion[];
