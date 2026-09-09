@@ -100,6 +100,10 @@ export interface PYQQuestion {
   answer: string;
   topic?: string;
   type?: string;
+  paper?: string;
+  sourceUrl?: string;
+  confidence?: number;
+  verified?: boolean;
 }
 
 export interface TeacherNoteBlock {
@@ -108,6 +112,7 @@ export interface TeacherNoteBlock {
   bullets?: string[];
   formula?: string;
   diagram?: string;
+  confidence?: number;
 }
 
 export interface ShortNotes {
