@@ -37,6 +37,11 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
   const askedRef = useRef<Set<number>>(new Set());
   const lastAskAtRef = useRef(0);
 
+  // Real exam calendar: the closer the exam, the tighter the check-in cadence.
+  const examTarget = useMemo(() => getExamTarget(), []);
+  const examDays = useMemo(() => daysUntilExam(examTarget), [examTarget]);
+  const urgency = examUrgencyFactor(examDays);
+
   // Map each quiz question to a transcript timestamp (keyword match, fallback spread).
   const timedQuiz = useMemo(() => {
     if (!quiz.length) return [] as { q: QuizQuestion; at: number }[];
@@ -76,7 +81,7 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
       if (!t) return;
       // Higher accuracy → longer gaps; struggling learners get checked more often.
       const acc = stats.asked ? stats.correct / stats.asked : 0.5;
-      const gap = BASE_INTERVAL_SEC * (acc > 0.8 ? 1.4 : acc < 0.4 ? 0.7 : 1);
+      const gap = BASE_INTERVAL_SEC * (acc > 0.8 ? 1.4 : acc < 0.4 ? 0.7 : 1) * urgency;
       if (lastAskAtRef.current > 0 && t - lastAskAtRef.current < gap) return;
       const next = pickNext(t);
       if (!next) return;
