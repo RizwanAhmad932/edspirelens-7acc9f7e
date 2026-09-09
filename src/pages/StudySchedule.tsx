@@ -211,6 +211,39 @@ const StudySchedulePage = () => {
               )}
             </section>
 
+            <section
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => assign(0)}
+              className={cn(
+                "bg-card border border-border rounded-2xl p-4 space-y-2 shadow-card transition-colors",
+                dragging && "border-accent/50",
+              )}
+            >
+              <p className="hud-label flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-accent" /> Topic map
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Drag any topic onto a day to move it. Drop it here to park it for later.
+              </p>
+              <div className="flex flex-wrap gap-1 min-h-[28px]">
+                {topicsFor(0).length === 0 ? (
+                  <span className="text-[10px] text-muted-foreground">Every topic has a day.</span>
+                ) : (
+                  topicsFor(0).map((t) => (
+                    <span
+                      key={t}
+                      draggable
+                      onDragStart={() => setDragging(t)}
+                      onDragEnd={() => setDragging(null)}
+                      className="text-[9px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-foreground/10 cursor-grab active:cursor-grabbing"
+                    >
+                      {t}
+                    </span>
+                  ))
+                )}
+              </div>
+            </section>
+
             <div className="space-y-2">
               {schedule.days.map((d) => {
                 const mat = material[d.day];
