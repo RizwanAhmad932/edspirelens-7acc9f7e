@@ -195,6 +195,24 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
                   </span>
                 </div>
                 <p className="text-sm text-foreground leading-relaxed">{q.question}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <ConfidenceBadge value={q.confidence} verified={q.verified} />
+                  {q.paper && (
+                    <span className="text-[9px] font-mono-hud uppercase px-2 py-0.5 rounded-full border border-foreground/10 text-muted-foreground">
+                      {q.paper}
+                    </span>
+                  )}
+                  {q.sourceUrl && (
+                    <a
+                      href={q.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-[9px] font-mono-hud uppercase text-accent hover:underline"
+                    >
+                      source
+                    </a>
+                  )}
+                </div>
                 <button
                   onClick={() => setRevealed((r) => ({ ...r, [i]: !r[i] }))}
                   className="text-[10px] font-mono-hud uppercase tracking-wider text-accent flex items-center gap-1"
