@@ -95,7 +95,7 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
       setOpen(true);
     }, 2000);
     return () => window.clearInterval(id);
-  }, [visible, muted, active, getCurrentTime, pickNext, stats]);
+  }, [visible, muted, active, getCurrentTime, pickNext, stats, urgency]);
 
   useEffect(() => {
     if (!active || chosen !== null) return;
