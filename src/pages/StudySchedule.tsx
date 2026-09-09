@@ -216,7 +216,15 @@ const StudySchedulePage = () => {
                 const mat = material[d.day];
                 const isOpen = open === d.day;
                 return (
-                  <div key={d.day} className="rounded-xl border border-foreground/[0.07] bg-secondary/25 p-3 space-y-2">
+                  <div
+                    key={d.day}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => assign(d.day)}
+                    className={cn(
+                      "rounded-xl border border-foreground/[0.07] bg-secondary/25 p-3 space-y-2 transition-colors",
+                      dragging && "border-accent/50 bg-accent/[0.05]",
+                    )}
+                  >
                     <button
                       className="w-full text-left"
                       onClick={() => {
@@ -234,12 +242,20 @@ const StudySchedulePage = () => {
                         </div>
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-1">{d.focus}</p>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {d.topics?.map((t) => (
-                          <span key={t} className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25">{t}</span>
-                        ))}
-                      </div>
                     </button>
+                    <div className="flex flex-wrap gap-1">
+                      {topicsFor(d.day).map((t) => (
+                        <span
+                          key={t}
+                          draggable
+                          onDragStart={() => setDragging(t)}
+                          onDragEnd={() => setDragging(null)}
+                          className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25 cursor-grab active:cursor-grabbing"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
 
                     {isOpen && (
                       <div className="space-y-3 animate-fade-in">
