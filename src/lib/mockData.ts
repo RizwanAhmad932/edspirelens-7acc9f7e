@@ -83,6 +83,7 @@ export interface QuizQuestion {
   difficulty?: "easy" | "medium" | "hard" | string;
   topic?: string;
   timestamp?: string;
+  confidence?: number;
 }
 
 export interface Flashcard {
