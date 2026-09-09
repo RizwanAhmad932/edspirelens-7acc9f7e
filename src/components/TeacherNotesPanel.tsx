@@ -3,6 +3,7 @@ import { Loader2, Sparkles, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateTeacherNotes, TranscriptSegment, TeacherNoteBlock } from "@/lib/mockData";
 import { PanelHeader, ExportButton } from "@/components/panel/PanelFrame";
+import ConfidenceBadge from "@/components/panel/ConfidenceBadge";
 import { toast } from "sonner";
 
 interface Props {
@@ -82,6 +83,7 @@ const TeacherNotesPanel = ({ chapterTitle, transcript }: Props) => {
                   </span>
                 )}
                 <h4 className="text-sm font-semibold text-foreground">{b.heading}</h4>
+                <ConfidenceBadge value={b.confidence} className="ml-auto" />
               </div>
               {b.formula && (
                 <pre className="text-xs font-mono-hud bg-background/70 border border-accent/20 rounded-lg p-2.5 whitespace-pre-wrap break-words text-accent">

@@ -3,6 +3,7 @@ import { Loader2, Sparkles, Award, ChevronDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generatePYQ, PYQQuestion, TranscriptSegment } from "@/lib/mockData";
 import { PanelHeader, ExportButton } from "@/components/panel/PanelFrame";
+import ConfidenceBadge from "@/components/panel/ConfidenceBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
