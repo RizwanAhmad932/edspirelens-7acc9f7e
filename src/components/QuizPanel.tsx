@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, RotateCcw, BrainCircuit, Lightbulb, Target } from
 import { Button } from "@/components/ui/button";
 import { QuizQuestion, recordQuizAttempt } from "@/lib/mockData";
 import { PanelHeader, ExportButton, HudProgress } from "@/components/panel/PanelFrame";
+import ConfidenceBadge from "@/components/panel/ConfidenceBadge";
 import { cn } from "@/lib/utils";
 
 interface QuizPanelProps {
@@ -182,6 +183,7 @@ const QuizPanel = ({ questions, onComplete, videoTitle, analysisId }: QuizPanelP
             {question.timestamp}
           </span>
         )}
+        <ConfidenceBadge value={question.confidence} />
       </div>
 
       <p className="text-sm font-medium text-foreground leading-relaxed">{question.question}</p>

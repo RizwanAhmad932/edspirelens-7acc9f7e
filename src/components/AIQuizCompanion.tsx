@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, X, Timer, Flame, BellOff, Bell, Target, Lightbulb, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion, TranscriptSegment } from "@/lib/mockData";
+import { getExamTarget, daysUntilExam, examUrgencyFactor } from "@/lib/examTarget";
 
 interface Props {
   quiz: QuizQuestion[];
@@ -35,6 +36,11 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
   const [weakTopics, setWeakTopics] = useState<string[]>([]);
   const askedRef = useRef<Set<number>>(new Set());
   const lastAskAtRef = useRef(0);
+
+  // Real exam calendar: the closer the exam, the tighter the check-in cadence.
+  const examTarget = useMemo(() => getExamTarget(), []);
+  const examDays = useMemo(() => daysUntilExam(examTarget), [examTarget]);
+  const urgency = examUrgencyFactor(examDays);
 
   // Map each quiz question to a transcript timestamp (keyword match, fallback spread).
   const timedQuiz = useMemo(() => {
@@ -75,7 +81,7 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
       if (!t) return;
       // Higher accuracy → longer gaps; struggling learners get checked more often.
       const acc = stats.asked ? stats.correct / stats.asked : 0.5;
-      const gap = BASE_INTERVAL_SEC * (acc > 0.8 ? 1.4 : acc < 0.4 ? 0.7 : 1);
+      const gap = BASE_INTERVAL_SEC * (acc > 0.8 ? 1.4 : acc < 0.4 ? 0.7 : 1) * urgency;
       if (lastAskAtRef.current > 0 && t - lastAskAtRef.current < gap) return;
       const next = pickNext(t);
       if (!next) return;
@@ -89,7 +95,7 @@ const AIQuizCompanion = ({ quiz, transcript, getCurrentTime, visible }: Props) =
       setOpen(true);
     }, 2000);
     return () => window.clearInterval(id);
-  }, [visible, muted, active, getCurrentTime, pickNext, stats]);
+  }, [visible, muted, active, getCurrentTime, pickNext, stats, urgency]);
 
   useEffect(() => {
     if (!active || chosen !== null) return;

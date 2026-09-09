@@ -12,6 +12,7 @@ import {
   StudySchedule as Schedule, ScheduleDay, PYQQuestion, Flashcard, ShortNotes,
 } from "@/lib/mockData";
 import { buildScheduleIcs, downloadIcs } from "@/lib/exportIcs";
+import { saveExamTarget } from "@/lib/examTarget";
 
 const EXAMS = ["CBSE Board", "ICSE Board", "State Board", "JEE Main", "JEE Advanced", "NEET", "UPSC"];
 
@@ -47,6 +48,19 @@ const StudySchedulePage = () => {
   const [material, setMaterial] = useState<Record<number, DayMaterial>>({});
   const [startHour, setStartHour] = useState(18);
   const [reminder, setReminder] = useState(30);
+  // Topic map: topic -> assigned day number (0 = unassigned pool).
+  const [plan, setPlan] = useState<Record<string, number>>({});
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  const allTopics = schedule ? Array.from(new Set(schedule.days.flatMap((d) => d.topics || []))) : [];
+  const dayOf = (t: string) =>
+    plan[t] ?? schedule?.days.find((d) => (d.topics || []).includes(t))?.day ?? 0;
+  const topicsFor = (day: number) => allTopics.filter((t) => dayOf(t) === day);
+  const assign = (day: number) => {
+    if (!dragging) return;
+    setPlan((p) => ({ ...p, [dragging]: day }));
+    setDragging(null);
+  };
 
   const build = async () => {
     setLoading(true);
@@ -55,6 +69,10 @@ const StudySchedulePage = () => {
     try {
       const s = await generateStudySchedule(exam, days);
       setSchedule(s);
+      setPlan({});
+      if (s.examDate) {
+        saveExamTarget({ exam: s.exam || exam, examDate: s.examDate, confidence: s.examDateConfidence });
+      }
     } catch (e: any) {
       toast.error(e.message || "Could not build your schedule");
     } finally {
@@ -193,12 +211,53 @@ const StudySchedulePage = () => {
               )}
             </section>
 
+            <section
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => assign(0)}
+              className={cn(
+                "bg-card border border-border rounded-2xl p-4 space-y-2 shadow-card transition-colors",
+                dragging && "border-accent/50",
+              )}
+            >
+              <p className="hud-label flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-accent" /> Topic map
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Drag any topic onto a day to move it. Drop it here to park it for later.
+              </p>
+              <div className="flex flex-wrap gap-1 min-h-[28px]">
+                {topicsFor(0).length === 0 ? (
+                  <span className="text-[10px] text-muted-foreground">Every topic has a day.</span>
+                ) : (
+                  topicsFor(0).map((t) => (
+                    <span
+                      key={t}
+                      draggable
+                      onDragStart={() => setDragging(t)}
+                      onDragEnd={() => setDragging(null)}
+                      className="text-[9px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-foreground/10 cursor-grab active:cursor-grabbing"
+                    >
+                      {t}
+                    </span>
+                  ))
+                )}
+              </div>
+            </section>
+
             <div className="space-y-2">
               {schedule.days.map((d) => {
                 const mat = material[d.day];
                 const isOpen = open === d.day;
                 return (
-                  <div key={d.day} className="rounded-xl border border-foreground/[0.07] bg-secondary/25 p-3 space-y-2">
+                  <div
+                    key={d.day}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => assign(d.day)}
+                    className={cn(
+                      "rounded-xl border border-foreground/[0.07] bg-secondary/25 p-3 space-y-2 transition-colors",
+                      dragging && "border-accent/50 bg-accent/[0.05]",
+                    )}
+                  >
                     <button
                       className="w-full text-left"
                       onClick={() => {
@@ -216,12 +275,20 @@ const StudySchedulePage = () => {
                         </div>
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-1">{d.focus}</p>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {d.topics?.map((t) => (
-                          <span key={t} className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25">{t}</span>
-                        ))}
-                      </div>
                     </button>
+                    <div className="flex flex-wrap gap-1">
+                      {topicsFor(d.day).map((t) => (
+                        <span
+                          key={t}
+                          draggable
+                          onDragStart={() => setDragging(t)}
+                          onDragEnd={() => setDragging(null)}
+                          className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25 cursor-grab active:cursor-grabbing"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
 
                     {isOpen && (
                       <div className="space-y-3 animate-fade-in">

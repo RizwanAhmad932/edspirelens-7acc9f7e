@@ -83,6 +83,7 @@ export interface QuizQuestion {
   difficulty?: "easy" | "medium" | "hard" | string;
   topic?: string;
   timestamp?: string;
+  confidence?: number;
 }
 
 export interface Flashcard {
@@ -100,6 +101,10 @@ export interface PYQQuestion {
   answer: string;
   topic?: string;
   type?: string;
+  paper?: string;
+  sourceUrl?: string;
+  confidence?: number;
+  verified?: boolean;
 }
 
 export interface TeacherNoteBlock {
@@ -108,6 +113,7 @@ export interface TeacherNoteBlock {
   bullets?: string[];
   formula?: string;
   diagram?: string;
+  confidence?: number;
 }
 
 export interface ShortNotes {
