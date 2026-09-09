@@ -48,6 +48,19 @@ const StudySchedulePage = () => {
   const [material, setMaterial] = useState<Record<number, DayMaterial>>({});
   const [startHour, setStartHour] = useState(18);
   const [reminder, setReminder] = useState(30);
+  // Topic map: topic -> assigned day number (0 = unassigned pool).
+  const [plan, setPlan] = useState<Record<string, number>>({});
+  const [dragging, setDragging] = useState<string | null>(null);
+
+  const allTopics = schedule ? Array.from(new Set(schedule.days.flatMap((d) => d.topics || []))) : [];
+  const dayOf = (t: string) =>
+    plan[t] ?? schedule?.days.find((d) => (d.topics || []).includes(t))?.day ?? 0;
+  const topicsFor = (day: number) => allTopics.filter((t) => dayOf(t) === day);
+  const assign = (day: number) => {
+    if (!dragging) return;
+    setPlan((p) => ({ ...p, [dragging]: day }));
+    setDragging(null);
+  };
 
   const build = async () => {
     setLoading(true);
