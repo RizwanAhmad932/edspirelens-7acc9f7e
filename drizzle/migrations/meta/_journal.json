@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790826810661,
+      "tag": "0000_backup_ai_keys_and_pyq_sources",
+      "breakpoints": true
+    }
+  ]
+}
