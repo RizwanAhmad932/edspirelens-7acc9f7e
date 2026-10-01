@@ -91,6 +91,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_provider_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          last_error: string | null
+          last_status: string | null
+          last_used_at: string | null
+          model: string
+          priority: number
+          provider: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          last_error?: string | null
+          last_status?: string | null
+          last_used_at?: string | null
+          model?: string
+          priority?: number
+          provider: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          last_error?: string | null
+          last_status?: string | null
+          last_used_at?: string | null
+          model?: string
+          priority?: number
+          provider?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
@@ -319,6 +361,102 @@ export type Database = {
           page?: number
           questions?: Json
           sources?: Json
+        }
+        Relationships: []
+      }
+      pyq_questions: {
+        Row: {
+          answer: string
+          chapter_key: string
+          chapter_title: string
+          confidence: number
+          created_at: string
+          exam: string
+          id: string
+          marks: number
+          paper: string
+          question: string
+          source_id: string | null
+          source_url: string
+          topic: string
+          type: string
+          verified: boolean
+          year: string
+        }
+        Insert: {
+          answer?: string
+          chapter_key: string
+          chapter_title: string
+          confidence?: number
+          created_at?: string
+          exam: string
+          id?: string
+          marks?: number
+          paper?: string
+          question: string
+          source_id?: string | null
+          source_url?: string
+          topic?: string
+          type?: string
+          verified?: boolean
+          year?: string
+        }
+        Update: {
+          answer?: string
+          chapter_key?: string
+          chapter_title?: string
+          confidence?: number
+          created_at?: string
+          exam?: string
+          id?: string
+          marks?: number
+          paper?: string
+          question?: string
+          source_id?: string | null
+          source_url?: string
+          topic?: string
+          type?: string
+          verified?: boolean
+          year?: string
+        }
+        Relationships: []
+      }
+      pyq_sources: {
+        Row: {
+          chapter_title: string
+          created_at: string
+          error: string | null
+          exam: string
+          file_name: string
+          id: string
+          kind: string
+          questions_found: number
+          status: string
+          url: string
+        }
+        Insert: {
+          chapter_title: string
+          created_at?: string
+          error?: string | null
+          exam: string
+          file_name?: string
+          id?: string
+          kind: string
+          questions_found?: number
+          status?: string
+          url?: string
+        }
+        Update: {
+          chapter_title?: string
+          created_at?: string
+          error?: string | null
+          exam?: string
+          file_name?: string
+          id?: string
+          kind?: string
+          questions_found?: number
+          status?: string
+          url?: string
         }
         Relationships: []
       }

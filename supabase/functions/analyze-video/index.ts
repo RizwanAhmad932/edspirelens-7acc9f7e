@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callBackupAi, getFirecrawlKey, firecrawlSearch, officialSites, adminClient } from "../_shared/backupAi.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +24,14 @@ function stripTags(html: string) {
 }
 
 /** Live DuckDuckGo search — returns title/url/snippet triples. */
-async function webSearch(query: string, limit = 6): Promise<{ title: string; url: string; snippet: string }[]> {
+async function webSearch(query: string, limit = 6): Promise<{ title: string; url: string; snippet: string; markdown?: string }[]> {
+  try {
+    const fc = await getFirecrawlKey();
+    if (fc) {
+      const hits = await firecrawlSearch(fc, query, limit);
+      if (hits.length) return hits;
+    }
+  } catch (e) { console.error("Firecrawl search failed, using open web", e); }
   try {
     const resp = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query), {
       method: "GET",
@@ -73,7 +81,7 @@ async function readPage(url: string, cap = 4000): Promise<string> {
 async function browseResearch(queries: string[], pagesToRead = 2) {
   const searches = await Promise.all(queries.map((q) => webSearch(q, 5)));
   const seen = new Set<string>();
-  const hits: { title: string; url: string; snippet: string }[] = [];
+  const hits: { title: string; url: string; snippet: string; markdown?: string }[] = [];
   for (const list of searches) {
     for (const r of list) {
       if (seen.has(r.url)) continue;
@@ -81,7 +89,7 @@ async function browseResearch(queries: string[], pagesToRead = 2) {
       hits.push(r);
     }
   }
-  const pages = await Promise.all(hits.slice(0, pagesToRead).map((h) => readPage(h.url)));
+  const pages = await Promise.all(hits.slice(0, pagesToRead).map((h) => h.markdown ? Promise.resolve(h.markdown) : readPage(h.url)));
   const context = hits
     .map((h, i) => `SOURCE ${i + 1}: ${h.title}\n${h.url}\n${h.snippet}${pages[i] ? "\nPAGE TEXT: " + pages[i] : ""}`)
     .join("\n\n")
@@ -310,7 +318,7 @@ async function aiCall(
         break; // hand over to the next AI
       }
 
-      if (resp.status === 402) return resp; // credits — no other model will help
+      if (resp.status === 402 || resp.status === 403) { lastResp = resp; i = chain.length; break; } // built-in AI unavailable — go to admin backup keys
       if (resp.status === 429 || resp.status >= 500) {
         lastResp = resp;
         if (attempt === 0) {
@@ -336,6 +344,10 @@ async function aiCall(
       break; // next model
     }
   }
+
+  // Built-in AI exhausted — try the admin's own backup keys.
+  const backup = await callBackupAi(withRigor(messages), tools, toolChoice);
+  if (backup) return shapedResponse(backup);
 
   return lastResp ?? shapedResponse({ choices: [{ message: { content: "" } }] });
 }
@@ -766,11 +778,39 @@ Style: textbook-quality educational revision poster, professional, exam-focused,
         );
       }
 
-      // 2) Live internet research — real past papers from the open web.
+      // 1b) Admin-indexed real papers (uploaded PDFs / links / verified web finds).
+      const { data: indexedRows } = await supabase
+        .from("pyq_questions")
+        .select("year, marks, question, answer, type, topic, paper, source_url, confidence, verified")
+        .eq("exam", examLabel)
+        .eq("chapter_key", chapterKey)
+        .order("year", { ascending: false })
+        .limit(200);
+      const seenSet = new Set(alreadyAsked.map((q) => q.trim().toLowerCase()));
+      const indexed = (indexedRows || [])
+        .filter((r: any) => !seenSet.has(String(r.question).trim().toLowerCase()))
+        .map((r: any) => ({
+          year: r.year, marks: Number(r.marks), question: r.question, answer: r.answer, type: r.type,
+          topic: r.topic, paper: r.paper, sourceUrl: r.source_url, confidence: r.confidence, verified: r.verified,
+        }));
+      if (indexed.length >= 8) {
+        const batch = indexed.slice(0, 8).sort((a: any, b: any) => a.marks - b.marks);
+        return new Response(
+          JSON.stringify({ board: examLabel, questions: batch, sources: [], cached: true, indexed: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 2) Live internet research — official exam sites first, then the open web.
+      const sites = officialSites(examLabel);
       const research = await browseResearch([
+        ...(sites.length ? [`${chapterTitle} question paper ${sites.map((d) => "site:" + d).join(" OR ")}`] : []),
         `${examLabel} previous year questions ${chapterTitle} ${windowStart}-${windowEnd} with solutions`,
         `${examLabel} ${chapterTitle} past paper questions marking scheme pdf`,
-      ], 2);
+      ], 3);
+      const indexedBlock = indexed.length
+        ? `\nINDEXED REAL PAPERS (verified — include these first, verbatim):\n${indexed.map((q: any) => `- [${q.paper || q.year}] ${q.question}`).join("\n")}\n`
+        : "";
 
       const pyqResp = await aiCall(
         LOVABLE_API_KEY,
@@ -786,7 +826,7 @@ RULES:
           { role: "user", content: `Generate exactly 8 ${examLabel} PYQs for the chapter "${chapterTitle}" from years ${windowStart}-${windowEnd}${page > 1 ? " (batch " + page + " — COMPLETELY NEW questions)" : ""}.
 Mix 1/2/3/5-mark items, ordered lowest to highest marks.
 ${alreadyAsked.length ? `Do NOT repeat or paraphrase:\n- ${alreadyAsked.slice(-20).join("\n- ")}\n` : ""}
-WEB RESEARCH (live internet):
+${indexedBlock}WEB RESEARCH (live internet):
 ${research.context || "(no results — use your archive knowledge)"}
 
 Chapter scope (transcript excerpt):
@@ -854,6 +894,15 @@ ${(transcriptText || "").substring(0, 3000)}` }
 
       // 3) Store in the shared bank so every future request is instant.
       if (Array.isArray(pyq?.questions) && pyq.questions.length) {
+        const verifiedRows = pyq.questions.filter((q: any) => q.verified).map((q: any) => ({
+          exam: examLabel, chapter_key: chapterKey, chapter_title: chapterTitle,
+          year: String(q.year || ""), marks: Number(q.marks) || 1, question: q.question, answer: q.answer || "",
+          type: q.type || "", topic: q.topic || "", paper: q.paper || "", source_url: q.sourceUrl || "",
+          confidence: q.confidence, verified: true,
+        }));
+        if (verifiedRows.length) {
+          await adminClient().from("pyq_questions").upsert(verifiedRows, { onConflict: "exam,chapter_key,question", ignoreDuplicates: true });
+        }
         await supabase.from("pyq_bank").upsert({
           exam: examLabel,
           chapter_key: chapterKey,
