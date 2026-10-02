@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppLogo, refreshAppLogos } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
+import { AiKeysPanel, PyqSourcesPanel } from "@/components/admin/AdminAiSources";
+import { KeyRound, Database } from "lucide-react";
 
 const FESTIVAL_THEMES = [
   { name: "none", label: "No Theme", icon: "❌", desc: "Default look" },
@@ -328,7 +330,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-7 bg-secondary/50 rounded-lg h-9 sm:h-10">
+          <TabsList className="w-full grid grid-cols-9 bg-secondary/50 rounded-lg h-9 sm:h-10">
             <TabsTrigger value="users" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Users className="h-3 w-3" /><span className="hidden sm:inline">Users</span></TabsTrigger>
             <TabsTrigger value="logins" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Clock className="h-3 w-3" /><span className="hidden sm:inline">Logins</span></TabsTrigger>
             <TabsTrigger value="ads" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Megaphone className="h-3 w-3" /><span className="hidden sm:inline">Ads</span></TabsTrigger>
@@ -336,6 +338,8 @@ const AdminDashboard = () => {
             <TabsTrigger value="themes" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Palette className="h-3 w-3" /><span className="hidden sm:inline">Themes</span></TabsTrigger>
             <TabsTrigger value="apps" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><LayoutGrid className="h-3 w-3" /><span className="hidden sm:inline">Apps</span></TabsTrigger>
             <TabsTrigger value="branding" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><ImagePlus className="h-3 w-3" /><span className="hidden sm:inline">Logo</span></TabsTrigger>
+            <TabsTrigger value="aikeys" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><KeyRound className="h-3 w-3" /><span className="hidden sm:inline">AI Keys</span></TabsTrigger>
+            <TabsTrigger value="pyq" className="text-[10px] sm:text-xs gap-0.5 sm:gap-1 px-1 sm:px-2"><Database className="h-3 w-3" /><span className="hidden sm:inline">PYQ</span></TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -785,6 +789,8 @@ const AdminDashboard = () => {
               </Button>
             </div>
           </TabsContent>
+          <TabsContent value="aikeys"><AiKeysPanel /></TabsContent>
+          <TabsContent value="pyq"><PyqSourcesPanel /></TabsContent>
         </Tabs>
       </main>
     </div>
