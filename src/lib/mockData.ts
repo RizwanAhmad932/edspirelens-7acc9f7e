@@ -166,9 +166,31 @@ export interface StudySchedule {
   sources?: { title: string; url: string }[];
 }
 
-export async function generateStudySchedule(exam: string, days = 14): Promise<StudySchedule> {
+export interface SyllabusChapter {
+  name: string; unit: string; weight: number; pyqFrequency: number; avgQuestions: number;
+  lastAsked: string; priority: string; keyTopics: string[]; savedPyqs?: number;
+}
+export interface ExamSyllabus {
+  exam: string; session: string; totalMarks: number; confidence: number;
+  subjects: { name: string; weight: number; chapters: SyllabusChapter[] }[];
+  sources?: { title: string; url: string }[]; cached?: boolean;
+}
+
+export async function getExamSyllabus(exam: string, refresh = false): Promise<ExamSyllabus> {
   const { data, error } = await supabase.functions.invoke("analyze-video", {
-    body: { videoUrl: "", action: "study-schedule", exam, days },
+    body: { videoUrl: "", action: "exam-syllabus", exam, refresh },
+  });
+  if (error) throw new Error(error.message || "Failed to load syllabus");
+  if (data?.error) throw new Error(data.message || data.error);
+  return data as ExamSyllabus;
+}
+
+export async function generateStudySchedule(exam: string, days = 14, syllabus?: SyllabusChapter[]): Promise<StudySchedule> {
+  const { data, error } = await supabase.functions.invoke("analyze-video", {
+    body: {
+      videoUrl: "", action: "study-schedule", exam, days,
+      syllabus: syllabus?.map((c) => ({ name: c.name, weight: c.weight, pyqFrequency: c.pyqFrequency, priority: c.priority })),
+    },
   });
   if (error) throw new Error(error.message || "Failed to build study schedule");
   if (data?.error) throw new Error(data.message || data.error);

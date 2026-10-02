@@ -250,6 +250,24 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_syllabus: {
+        Row: {
+          data: Json
+          exam: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          exam: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          exam?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       login_logs: {
         Row: {
           email: string

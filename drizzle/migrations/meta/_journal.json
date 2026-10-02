@@ -8,6 +8,13 @@
       "when": 1790826810661,
       "tag": "0000_backup_ai_keys_and_pyq_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790909850053,
+      "tag": "0001_exam_syllabus_cache",
+      "breakpoints": true
     }
   ]
 }

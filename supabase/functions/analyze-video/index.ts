@@ -1272,6 +1272,115 @@ RULES:
       return new Response(JSON.stringify(plan), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "exam-syllabus") {
+      const examLabel = String(body.exam || "CBSE Board").slice(0, 60);
+      const refresh = !!body.refresh;
+      if (!refresh) {
+        const { data: row } = await supabase.from("exam_syllabus").select("data, updated_at").eq("exam", examLabel).maybeSingle();
+        if (row?.data && Date.now() - new Date(row.updated_at).getTime() < 30 * 86400000) {
+          return new Response(JSON.stringify({ ...row.data, cached: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+      const sites = officialSites(examLabel);
+      const year = new Date().getFullYear();
+      const research = await browseResearch([
+        ...(sites.length ? [`${examLabel} syllabus ${year} ${sites.map((d) => "site:" + d).join(" OR ")}`] : []),
+        `${examLabel} ${year} official syllabus chapter wise weightage marks`,
+        `${examLabel} chapter wise previous year questions analysis weightage`,
+      ], 3);
+
+      const sylResp = await aiCall(
+        LOVABLE_API_KEY,
+        [
+          { role: "system", content: `You are an exam analyst. Build the OFFICIAL current ${examLabel} syllabus as subjects -> units -> chapters, with real weightage.
+RULES:
+- Use the WEB RESEARCH (official syllabus + chapter-wise analyses) first; fall back to well-established knowledge of the exam pattern.
+- weight = percentage of total exam marks for that unit/chapter. Chapter weights within a subject should roughly sum to that subject's share. Use the official marks distribution where published.
+- pyqFrequency = 0-100 how often this chapter appears in past papers; avgQuestions = typical questions per paper; lastAsked = most recent year it was asked ("" if unknown).
+- priority = "high" | "medium" | "low" from weight x frequency.
+- Chapter names must be the standard textbook chapter names (NCERT names for CBSE/JEE/NEET).
+- confidence = 0-100 how reliable the weightage is (higher when an official source supports it).` },
+          { role: "user", content: `Exam: ${examLabel}\n\nWEB RESEARCH:\n${research.context || "(none)"}` },
+        ],
+        [{
+          type: "function",
+          function: {
+            name: "return_syllabus",
+            description: "Return the exam syllabus with weightage",
+            parameters: {
+              type: "object",
+              properties: {
+                exam: { type: "string" },
+                session: { type: "string" },
+                totalMarks: { type: "number" },
+                confidence: { type: "number" },
+                subjects: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      weight: { type: "number" },
+                      chapters: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            unit: { type: "string" },
+                            weight: { type: "number" },
+                            pyqFrequency: { type: "number" },
+                            avgQuestions: { type: "number" },
+                            lastAsked: { type: "string" },
+                            priority: { type: "string" },
+                            keyTopics: { type: "array", items: { type: "string" } },
+                          },
+                          required: ["name", "unit", "weight", "pyqFrequency", "avgQuestions", "lastAsked", "priority", "keyTopics"],
+                        },
+                      },
+                    },
+                    required: ["name", "weight", "chapters"],
+                  },
+                },
+              },
+              required: ["exam", "session", "totalMarks", "confidence", "subjects"],
+            },
+          },
+        }],
+        { type: "function", function: { name: "return_syllabus" } },
+      );
+      if (!sylResp.ok) {
+        const errResp = handleAIError(sylResp);
+        if (errResp) return errResp;
+        throw new Error(`AI error: ${sylResp.status}`);
+      }
+      const syl = parseToolResponse(await sylResp.json());
+      const sources = research.sources.slice(0, 6).map((s) => ({ title: s.title, url: s.url }));
+      const official = sources.some((s) => sites.some((d) => s.url.includes(d)));
+      let conf = Number(syl.confidence) || 60;
+      conf = official ? Math.min(98, conf + 10) : Math.min(conf, sources.length >= 3 ? 82 : 68);
+
+      // Count real indexed PYQs per chapter.
+      const { data: idx } = await supabase.from("pyq_questions").select("chapter_key").eq("exam", examLabel).limit(5000);
+      const counts: Record<string, number> = {};
+      for (const r of (idx || []) as any[]) counts[r.chapter_key] = (counts[r.chapter_key] || 0) + 1;
+      const { data: bank } = await supabase.from("pyq_bank").select("chapter_key, questions").eq("exam", examLabel).limit(2000);
+      for (const r of (bank || []) as any[]) counts[r.chapter_key] = (counts[r.chapter_key] || 0) + (Array.isArray(r.questions) ? r.questions.length : 0);
+
+      const result = {
+        ...syl,
+        exam: examLabel,
+        confidence: Math.round(conf),
+        sources,
+        subjects: (syl.subjects || []).map((sub: any) => ({
+          ...sub,
+          chapters: (sub.chapters || []).map((c: any) => ({ ...c, savedPyqs: counts[slugKey(c.name)] || 0 })),
+        })),
+      };
+      await supabase.from("exam_syllabus").upsert({ exam: examLabel, data: result, updated_at: new Date().toISOString() });
+      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "study-schedule") {
       const { days, exam: rawExam } = body;
       const planDays = Math.min(Math.max(Number(days) || 14, 3), 30);
@@ -1326,6 +1435,9 @@ ${research.context || "(no results — estimate from typical exam calendar)"}
 
 Videos studied:
 ${watched || "(none yet — build a foundation plan for this exam)"}
+
+Official syllabus weightage (ALIGN THE PLAN TO THIS — give high-weight / high-PYQ chapters more days, cover every high-priority chapter at least once, and name chapters exactly as written here):
+${Array.isArray(body.syllabus) && body.syllabus.length ? body.syllabus.slice(0, 60).map((c: any) => `- ${String(c.name).slice(0, 80)} (${Number(c.weight) || 0}% · PYQ freq ${Number(c.pyqFrequency) || 0} · ${String(c.priority || "")})`).join("\n") : "(not provided)"}
 
 Topic performance:
 ${perf.map((p) => `- ${p.topic}: ${p.accuracy}% over ${p.total} questions`).join("\n") || "(no quiz data yet)"}` },
