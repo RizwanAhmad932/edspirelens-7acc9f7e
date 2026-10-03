@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect, ReactNode } from "react";
-import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList, Zap, ImagePlus } from "lucide-react";
+import { X, Minimize2, Maximize2, GripVertical, BookOpen, Search, BrainCircuit, Loader2, FileText, Layers, MessageCircle, Image as ImageIcon, Award, ClipboardList, Zap, ImagePlus, Download } from "lucide-react";
+import { downloadCramKit } from "@/lib/cramKit";
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SummaryPanel from "./SummaryPanel";
 import NotesPanel from "./NotesPanel";
@@ -89,6 +91,9 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
               <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">Edspire Lens</span>
               {!minimized && <p className="text-xs text-primary-foreground/70 truncate mt-0.5">{videoTitle}</p>}
             </div>
+            <button title="Download Cram Kit (PDF)" onClick={async (e) => { e.stopPropagation(); try { toast.info("Building your Cram Kit..."); await downloadCramKit({ title: videoTitle, summary, notes, quiz, flashcards }); } catch { toast.error("Could not build the Cram Kit"); } }} onMouseDown={(e) => e.stopPropagation()} className="p-1 rounded hover:bg-primary-foreground/10 text-primary-foreground/80 flex items-center gap-1 text-[10px] font-semibold">
+              <Download className="h-3.5 w-3.5" /> Cram Kit
+            </button>
             <button onClick={() => setMinimized(!minimized)} className="p-1 rounded hover:bg-primary-foreground/10 text-primary-foreground/80">
               {minimized ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
             </button>
@@ -189,6 +194,9 @@ const FloatingLens = ({ isOpen, onClose, summary, notes, transcript, quiz, quizL
             <span className="text-xs font-semibold text-primary-foreground tracking-wide uppercase">Edspire Lens</span>
             {!minimized && <p className="text-xs text-primary-foreground/70 truncate mt-0.5">{videoTitle}</p>}
           </div>
+          <button title="Download Cram Kit (PDF)" onClick={async (e) => { e.stopPropagation(); try { toast.info("Building your Cram Kit..."); await downloadCramKit({ title: videoTitle, summary, notes, quiz, flashcards }); } catch { toast.error("Could not build the Cram Kit"); } }} onMouseDown={(e) => e.stopPropagation()} className="p-1 rounded hover:bg-primary-foreground/10 text-primary-foreground/80 flex items-center gap-1 text-[10px] font-semibold">
+            <Download className="h-3.5 w-3.5" /> Cram Kit
+          </button>
           <button onClick={() => setMinimized(!minimized)} className="p-1 rounded hover:bg-primary-foreground/10 text-primary-foreground/80 transition-colors">
             {minimized ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
           </button>

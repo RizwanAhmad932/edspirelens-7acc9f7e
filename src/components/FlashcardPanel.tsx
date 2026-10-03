@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, RotateCcw, Loader2, Check, X, Zap, Layers, S
 import { Button } from "@/components/ui/button";
 import { PanelHeader, ExportButton, HudProgress } from "@/components/panel/PanelFrame";
 import { cn } from "@/lib/utils";
+import { registerCards, reviewCard, cardId } from "@/lib/srsDeck";
 
 export interface Flashcard {
   front: string;
@@ -47,6 +48,8 @@ const FlashcardPanel = ({ flashcards, loading, deckId }: FlashcardPanelProps) =>
     setShowHint(false);
   }, [storageKey]);
 
+  useEffect(() => { registerCards(deckId || "Lecture", flashcards); }, [flashcards, deckId]);
+
   const topics = useMemo(
     () => Array.from(new Set(flashcards.map((c) => c.topic).filter(Boolean))) as string[],
     [flashcards],
@@ -79,6 +82,7 @@ const FlashcardPanel = ({ flashcards, loading, deckId }: FlashcardPanelProps) =>
     const updated = { ...state, [currentIdx]: { ease, due: step + gap, streak } };
     setState(updated);
     saveState(storageKey, updated);
+    if (card) reviewCard(cardId(card.front), r);
     setSession((s) => ({ ...s, [r]: s[r] + 1 }));
     setFlipped(false);
     setShowHint(false);
