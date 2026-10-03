@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  generateStudySchedule, generatePYQ, generateFlashcards, generateShortNotes,
+  generateStudySchedule, generatePYQ, getExamSyllabus, ExamSyllabus, generateFlashcards, generateShortNotes,
   StudySchedule as Schedule, ScheduleDay, PYQQuestion, Flashcard, ShortNotes,
 } from "@/lib/mockData";
 import { buildScheduleIcs, downloadIcs } from "@/lib/exportIcs";
 import { saveExamTarget } from "@/lib/examTarget";
+import SyllabusPanel from "@/components/SyllabusPanel";
 
 const EXAMS = ["CBSE Board", "ICSE Board", "State Board", "JEE Main", "JEE Advanced", "NEET", "UPSC"];
 
@@ -51,6 +52,19 @@ const StudySchedulePage = () => {
   // Topic map: topic -> assigned day number (0 = unassigned pool).
   const [plan, setPlan] = useState<Record<string, number>>({});
   const [dragging, setDragging] = useState<string | null>(null);
+  const [view, setView] = useState<"plan" | "syllabus">("plan");
+  const [syllabus, setSyllabus] = useState<ExamSyllabus | null>(null);
+  const [sylLoading, setSylLoading] = useState(false);
+
+  const loadSyllabus = async (refresh = false) => {
+    setSylLoading(true);
+    try { setSyllabus(await getExamSyllabus(exam, refresh)); }
+    catch (e: any) { toast.error(e.message || "Could not load syllabus"); }
+    finally { setSylLoading(false); }
+  };
+  const plannedText = schedule
+    ? schedule.days.map((d) => [d.focus, ...(d.topics || []), ...(d.tasks || [])].join(" ")).join(" ").toLowerCase()
+    : "";
 
   const allTopics = schedule ? Array.from(new Set(schedule.days.flatMap((d) => d.topics || []))) : [];
   const dayOf = (t: string) =>
@@ -67,7 +81,7 @@ const StudySchedulePage = () => {
     setSchedule(null);
     setMaterial({});
     try {
-      const s = await generateStudySchedule(exam, days);
+      const s = await generateStudySchedule(exam, days, syllabus?.subjects.flatMap((x) => x.chapters));
       setSchedule(s);
       setPlan({});
       if (s.examDate) {
@@ -148,7 +162,7 @@ const StudySchedulePage = () => {
             {EXAMS.map((e) => (
               <button
                 key={e}
-                onClick={() => setExam(e)}
+                onClick={() => { setExam(e); if (e !== exam) setSyllabus(null); }}
                 className={cn(
                   "text-[9px] font-mono-hud uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors",
                   exam === e ? "bg-accent/15 text-accent border-accent/50" : "border-foreground/10 text-muted-foreground hover:border-accent/40",
@@ -176,16 +190,30 @@ const StudySchedulePage = () => {
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             Build my schedule
           </Button>
+          {syllabus && <p className="text-[10px] text-primary">Plan will follow the {syllabus.exam} syllabus weightage.</p>}
         </section>
 
-        {loading && (
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-secondary/50">
+          {(["plan", "syllabus"] as const).map((v) => (
+            <button key={v} onClick={() => setView(v)}
+              className={cn("py-1.5 rounded-lg text-xs transition-colors", view === v ? "bg-card text-foreground shadow-card" : "text-muted-foreground")}>
+              {v === "plan" ? "Day plan" : "Exam syllabus"}
+            </button>
+          ))}
+        </div>
+
+        {view === "syllabus" && (
+          <SyllabusPanel exam={exam} syllabus={syllabus} loading={sylLoading} onLoad={loadSyllabus} plannedText={plannedText} />
+        )}
+
+        {view === "plan" && loading && (
           <div className="flex flex-col items-center py-12 gap-2">
             <Loader2 className="h-6 w-6 animate-spin text-accent" />
             <p className="text-xs text-muted-foreground">Checking real exam dates and planning your days…</p>
           </div>
         )}
 
-        {schedule && (
+        {view === "plan" && schedule && (
           <>
             <section className="bg-card border border-border rounded-2xl p-4 space-y-2 shadow-card">
               <div className="flex items-center justify-between gap-2 flex-wrap">
