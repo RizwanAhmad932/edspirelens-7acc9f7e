@@ -14,6 +14,7 @@ import {
 import { buildScheduleIcs, downloadIcs } from "@/lib/exportIcs";
 import { saveExamTarget } from "@/lib/examTarget";
 import SyllabusPanel from "@/components/SyllabusPanel";
+import DueTodayDeck from "@/components/DueTodayDeck";
 
 const EXAMS = ["CBSE Board", "ICSE Board", "State Board", "JEE Main", "JEE Advanced", "NEET", "UPSC"];
 
@@ -153,6 +154,7 @@ const StudySchedulePage = () => {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+        <DueTodayDeck />
         <section className="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-card">
           <p className="text-xs text-muted-foreground">
             Pick your exam — the app looks up the real exam date on the web and maps every day to topics,

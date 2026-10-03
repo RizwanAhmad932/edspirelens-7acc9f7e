@@ -15,6 +15,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import AdBanner, { AdPopup } from "@/components/AdBanner";
 import { MiniMascot } from "@/components/MascotAvatar";
 import InstallButton from "@/components/InstallButton";
+import DueTodayDeck from "@/components/DueTodayDeck";
 import SimulatedOverlay from "@/components/SimulatedOverlay";
 import AIQuizCompanion from "@/components/AIQuizCompanion";
 import { Button } from "@/components/ui/button";
@@ -246,6 +247,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-6 sm:space-y-10">
+        <DueTodayDeck />
         {/* Hero */}
         {!overlayMode && (
           <div className="text-center space-y-3 sm:space-y-5 max-w-3xl mx-auto pt-1 sm:pt-4 animate-fade-in">
