@@ -306,3 +306,59 @@
 }
 .mascot-float { animation: mascot-float 3.5s ease-in-out infinite; transform-origin: center; }
 .mascot-eyes { animation: mascot-blink 4s infinite; transform-origin: center; transform-box: fill-box; }
+
+/* Festival palettes override semantic roles without replacing light/dark surfaces. */
+[data-festival] {
+  --accent: var(--primary);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --gradient-primary: linear-gradient(120deg, hsl(var(--primary)), hsl(var(--festival-highlight)));
+  --gradient-accent: var(--gradient-primary);
+  --gradient-surface: linear-gradient(180deg, hsl(var(--primary) / .06), hsl(var(--background)) 340px);
+  --shadow-glow: 0 0 24px hsl(var(--primary) / .22);
+  --festival-ink: 0 0% 98%;
+  --festival-backdrop: 0 0% 15%;
+}
+[data-festival="republic_day"], [data-festival="independence_day"] { --primary: 142 70% 30%; --festival-highlight: 28 92% 55%; }
+[data-festival="eid"] { --primary: 162 74% 30%; --festival-highlight: 43 72% 58%; }
+[data-festival="diwali"] { --primary: 18 85% 40%; --festival-highlight: 42 92% 54%; }
+[data-festival="dussehra"] { --primary: 355 73% 43%; --festival-highlight: 28 90% 55%; }
+[data-festival="holi"] { --primary: 328 77% 42%; --festival-highlight: 187 80% 40%; }
+[data-festival="navratri"] { --primary: 335 74% 41%; --festival-highlight: 43 88% 50%; }
+[data-festival="christmas"] { --primary: 350 73% 43%; --festival-highlight: 152 56% 35%; }
+[data-festival="new_year"] { --primary: 195 78% 31%; --festival-highlight: 42 84% 53%; }
+.dark[data-festival="republic_day"], .dark[data-festival="independence_day"] { --primary: 142 54% 44%; }
+.dark[data-festival="eid"] { --primary: 162 60% 44%; }
+.dark[data-festival="diwali"] { --primary: 26 85% 51%; }
+.dark[data-festival="dussehra"], .dark[data-festival="christmas"] { --primary: 350 70% 57%; }
+.dark[data-festival="holi"], .dark[data-festival="navratri"] { --primary: 328 78% 59%; }
+.dark[data-festival="new_year"] { --primary: 195 70% 48%; }
+.festival-banner { position: relative; isolation: isolate; overflow: hidden; background: hsl(var(--festival-backdrop, 0 0% 15%)); color: hsl(var(--festival-ink, 0 0% 98%)); border-bottom: 2px solid hsl(var(--primary)); }
+.festival-banner-inner { position: relative; max-width: 1280px; min-height: 178px; margin: auto; display: flex; align-items: center; padding: 24px 32px; }
+.festival-banner-copy { position: relative; z-index: 2; max-width: 65%; }
+.festival-eyebrow { font-size: 10px; font-weight: 600; margin-bottom: 10px; opacity: .7; }
+.festival-banner h2 { font-family: 'Work Sans', system-ui, sans-serif; font-size: 30px; line-height: 1.2; font-weight: 700; letter-spacing: 0; }
+.festival-message { font-size: 14px; margin-top: 8px; opacity: .8; max-width: 390px; }
+.festival-banner-art { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); width: 310px; height: 310px; object-fit: cover; z-index: 0; mask-image: linear-gradient(90deg, transparent, black 26%); }
+.festival-dismiss { position: absolute; top: 8px; right: 8px; z-index: 3; color: inherit; }
+.festival-choice:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.festival-preview .festival-banner-inner { min-height: 160px; }
+.festival-decorations { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 41; }
+.festival-motif { position: absolute; color: hsl(var(--primary)); font-size: 18px; opacity: .25; animation: festival-sway 6s ease-in-out infinite; }
+.festival-motif-0 { left: 8px; top: 28%; }
+.festival-motif-1 { right: 8px; top: 35%; animation-delay: -2s; }
+.festival-motif-2 { left: 12px; top: 62%; animation-delay: -4s; }
+.festival-motif-3 { right: 12px; top: 75%; animation-delay: -1s; }
+.festival-motif-4 { left: 6px; top: 88%; animation-delay: -3s; }
+.festival-motif-5 { right: 6px; top: 92%; animation-delay: -5s; }
+@keyframes festival-sway { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-8px) rotate(8deg); } }
+@media (max-width: 640px) {
+  .festival-banner-inner { min-height: 154px; padding: 22px 16px; }
+  .festival-banner-copy { max-width: 64%; }
+  .festival-banner h2 { font-size: 22px; }
+  .festival-eyebrow { font-size: 8px; }
+  .festival-message { font-size: 12px; }
+  .festival-banner-art { width: 210px; height: 210px; right: -42px; }
+  .festival-motif { font-size: 13px; opacity: .18; }
+}
+@media (prefers-reduced-motion: reduce) { .festival-motif { animation: none; } }

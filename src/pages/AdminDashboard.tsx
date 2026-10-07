@@ -12,19 +12,7 @@ import { useAppLogo, refreshAppLogos } from "@/hooks/use-app-logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AiKeysPanel, PyqSourcesPanel } from "@/components/admin/AdminAiSources";
 import { KeyRound, Database } from "lucide-react";
-
-const FESTIVAL_THEMES = [
-  { name: "none", label: "No Theme", icon: "❌", desc: "Default look" },
-  { name: "republic_day", label: "Republic Day", icon: "🇮🇳", desc: "Tricolor flags & Ashoka Chakra" },
-  { name: "independence_day", label: "Independence Day", icon: "🇮🇳", desc: "Tricolor, kites & Jai Hind" },
-  { name: "eid", label: "Eid", icon: "🌙", desc: "Crescent moon, stars & Eid Mubarak" },
-  { name: "diwali", label: "Diwali", icon: "🪔", desc: "Diyas, fireworks & lights" },
-  { name: "dussehra", label: "Dussehra", icon: "🏹", desc: "Fire effects & victory theme" },
-  { name: "holi", label: "Holi", icon: "🎨", desc: "Color splashes everywhere" },
-  { name: "navratri", label: "Navratri", icon: "💃", desc: "Garba dance & vibrant colors" },
-  { name: "christmas", label: "Christmas", icon: "🎄", desc: "Snowfall & Santa flying" },
-  { name: "new_year", label: "New Year", icon: "🎉", desc: "Confetti & fireworks" },
-];
+import FestivalThemePanel from "@/components/admin/FestivalThemePanel";
 
 const AdminDashboard = () => {
   const headerLogo = useAppLogo();
@@ -35,8 +23,6 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [challenges, setChallenges] = useState<any[]>([]);
-  const [activeTheme, setActiveTheme] = useState("none");
-  const [themeSaving, setThemeSaving] = useState(false);
   const navigate = useNavigate();
 
   // App shortcut form state
@@ -95,7 +81,7 @@ const AdminDashboard = () => {
     setLoginLogs(data.loginLogs || []);
     setStats(data.stats || { totalUsers: 0, todayLogins: 0, totalLogins: 0 });
     setUsers(data.users || []);
-    await Promise.all([loadAds(), loadChallenges(), loadActiveTheme(), loadShortcuts(), loadLogos()]);
+    await Promise.all([loadAds(), loadChallenges(), loadShortcuts(), loadLogos()]);
     setLoading(false);
   };
 
@@ -173,25 +159,6 @@ const AdminDashboard = () => {
     await supabase.from("app_shortcuts").delete().eq("id", id);
     await loadShortcuts();
     toast.success("Removed");
-  };
-
-  const loadActiveTheme = async () => {
-    const { data } = await supabase.from("app_themes").select("theme_name").eq("is_active", true).single();
-    if (data) setActiveTheme(data.theme_name);
-  };
-
-  const handleSetTheme = async (themeName: string) => {
-    setThemeSaving(true);
-    try {
-      const { error } = await supabase.rpc("activate_theme", { _theme_name: themeName });
-      if (error) throw error;
-      setActiveTheme(themeName);
-      toast.success(`Theme set to ${FESTIVAL_THEMES.find(t => t.name === themeName)?.label || themeName}!`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to set theme");
-    } finally {
-      setThemeSaving(false);
-    }
   };
 
   const loadAds = async () => {
@@ -636,44 +603,7 @@ const AdminDashboard = () => {
 
           {/* Themes Tab */}
           <TabsContent value="themes">
-            <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
-              <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2 mb-2">
-                <Palette className="h-5 w-5 text-accent" /> Festival Themes
-              </h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Select a theme to apply across the entire app for all users. Only one theme can be active at a time.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {FESTIVAL_THEMES.map(theme => {
-                  const isActive = activeTheme === theme.name;
-                  return (
-                    <button
-                      key={theme.name}
-                      onClick={() => handleSetTheme(theme.name)}
-                      disabled={themeSaving}
-                      className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
-                        isActive
-                          ? "border-accent bg-accent/10 shadow-sm"
-                          : "border-border hover:border-accent/40"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="text-2xl">{theme.icon}</span>
-                        <div>
-                          <p className="font-semibold text-foreground text-sm">{theme.label}</p>
-                          <p className="text-xs text-muted-foreground">{theme.desc}</p>
-                        </div>
-                      </div>
-                      {isActive && (
-                        <span className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-bold animate-scale-in">
-                          ✓ ACTIVE
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <FestivalThemePanel />
           </TabsContent>
 
           {/* Apps Tab */}
