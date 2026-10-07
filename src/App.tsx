@@ -7,6 +7,9 @@ import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
 import { lazyRetry } from "@/lib/lazyRetry";
+import { FestivalThemeProvider } from "@/hooks/use-festival-theme";
+import FestivalOverlay from "@/components/FestivalOverlay";
+import FestivalBanner from "@/components/FestivalBanner";
 
 const Auth = lazyRetry(() => import("./pages/Auth"), "Auth");
 const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"), "ResetPassword");
@@ -28,9 +31,12 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <FestivalThemeProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <FestivalBanner />
+        <FestivalOverlay />
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -46,6 +52,7 @@ const App = () => (
         </Routes>
         </Suspense>
       </BrowserRouter>
+      </FestivalThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

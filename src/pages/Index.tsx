@@ -31,7 +31,6 @@ import {
   Flashcard,
 } from "@/lib/mockData";
 
-const FestivalOverlay = lazyRetry(() => import("@/components/FestivalOverlay"), "FestivalOverlay");
 const FloatingLens = lazyRetry(() => import("@/components/FloatingLens"), "FloatingLens");
 const AppDrawer = lazyRetry(() => import("@/components/AppDrawer"), "AppDrawer");
 const TutorialOverlay = lazyRetry(() => import("@/components/TutorialOverlay"), "TutorialOverlay");
@@ -200,7 +199,6 @@ const Index = () => {
         <div className="absolute -top-40 -left-32 h-[26rem] w-[26rem] rounded-full bg-accent/20 blur-[120px] animate-glow-pulse" />
         <div className="absolute -bottom-40 -right-32 h-[26rem] w-[26rem] rounded-full bg-primary/10 blur-[120px]" />
       </div>
-      <Suspense fallback={null}><FestivalOverlay /></Suspense>
       <AdPopup />
 
       {/* Header */}
