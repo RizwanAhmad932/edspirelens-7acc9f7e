@@ -15,6 +15,13 @@
       "when": 1790909850053,
       "tag": "0001_exam_syllabus_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791338611043,
+      "tag": "0002_public_active_festival_theme",
+      "breakpoints": true
     }
   ]
 }
