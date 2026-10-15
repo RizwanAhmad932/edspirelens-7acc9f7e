@@ -1,4 +1,5 @@
 import { CheckCircle, BookOpen } from "lucide-react";
+import MathText from "@/components/MathText";
 import { PanelHeader, ExportButton } from "@/components/panel/PanelFrame";
 
 interface SummaryPanelProps {
@@ -36,7 +37,7 @@ const SummaryPanel = ({ summary, chapterTitle = "Chapter" }: SummaryPanelProps) 
                 {String(i + 1).padStart(2, "0")}
               </span>
               <CheckCircle className="h-3.5 w-3.5 mt-0.5 text-accent shrink-0" />
-              <span className="text-foreground/85 leading-relaxed">{point}</span>
+              <MathText className="text-foreground/85 leading-relaxed" text={point} />
             </li>
           ))}
         </ul>

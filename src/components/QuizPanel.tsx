@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import MathText from "@/components/MathText";
 import { CheckCircle, XCircle, RotateCcw, BrainCircuit, Lightbulb, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuizQuestion, recordQuizAttempt } from "@/lib/mockData";
@@ -125,9 +126,9 @@ const QuizPanel = ({ questions, onComplete, videoTitle, analysisId }: QuizPanelP
             <p className="hud-label">Mistakes to review</p>
             {wrong.map((q, i) => (
               <div key={i} className="rounded-xl border border-destructive/25 bg-destructive/[0.05] p-3 space-y-1">
-                <p className="text-xs font-medium text-foreground">{q.question}</p>
-                <p className="text-[11px] text-success">✓ {q.options[q.correctIndex]}</p>
-                {q.explanation && <p className="text-[11px] text-muted-foreground">{q.explanation}</p>}
+                <MathText as="p" className="text-xs font-medium text-foreground" text={q.question} />
+                <p className="text-[11px] text-success">✓ <MathText text={q.options[q.correctIndex]} /></p>
+                {q.explanation && <MathText as="p" className="text-[11px] text-muted-foreground" text={q.explanation} />}
               </div>
             ))}
           </div>
@@ -186,7 +187,7 @@ const QuizPanel = ({ questions, onComplete, videoTitle, analysisId }: QuizPanelP
         <ConfidenceBadge value={question.confidence} />
       </div>
 
-      <p className="text-sm font-medium text-foreground leading-relaxed">{question.question}</p>
+      <MathText as="p" className="text-sm font-medium text-foreground leading-relaxed" text={question.question} />
 
       <div className="space-y-2">
         {question.options.map((opt, idx) => {
@@ -207,7 +208,7 @@ const QuizPanel = ({ questions, onComplete, videoTitle, analysisId }: QuizPanelP
               <span className="font-mono-hud text-[10px] text-accent mt-0.5">
                 {String.fromCharCode(65 + idx)}
               </span>
-              <span className="flex-1">{opt}</span>
+              <MathText className="flex-1" text={opt} />
               {answered && isCorrect && <CheckCircle className="h-4 w-4 text-success shrink-0" />}
               {answered && !isCorrect && idx === selected && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
             </button>

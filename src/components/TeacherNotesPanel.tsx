@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MathText from "@/components/MathText";
 import { Loader2, Sparkles, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateTeacherNotes, TranscriptSegment, TeacherNoteBlock } from "@/lib/mockData";
@@ -86,15 +87,13 @@ const TeacherNotesPanel = ({ chapterTitle, transcript }: Props) => {
                 <ConfidenceBadge value={b.confidence} className="ml-auto" />
               </div>
               {b.formula && (
-                <pre className="text-xs font-mono-hud bg-background/70 border border-accent/20 rounded-lg p-2.5 whitespace-pre-wrap break-words text-accent">
-                  {b.formula}
-                </pre>
+                <MathText formula as="div" className="text-sm bg-background/70 border border-accent/20 rounded-lg p-2.5 overflow-x-auto text-foreground" text={b.formula} />
               )}
               {b.diagram && <p className="text-[11px] italic text-muted-foreground">📐 {b.diagram}</p>}
               {b.bullets && b.bullets.length > 0 && (
                 <ul className="text-xs text-foreground/85 space-y-1 list-disc pl-5">
                   {b.bullets.map((bl, j) => (
-                    <li key={j}>{bl}</li>
+                    <li key={j}><MathText text={bl} /></li>
                   ))}
                 </ul>
               )}

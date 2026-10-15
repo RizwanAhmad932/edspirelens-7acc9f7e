@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import MathText from "@/components/MathText";
 import { Loader2, Sparkles, Award, ChevronDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generatePYQ, PYQQuestion, TranscriptSegment } from "@/lib/mockData";
@@ -195,7 +196,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
                     {q.marks} M
                   </span>
                 </div>
-                <p className="text-sm text-foreground leading-relaxed">{q.question}</p>
+                <MathText as="p" className="text-sm text-foreground leading-relaxed" text={q.question} />
                 <div className="flex flex-wrap items-center gap-1.5">
                   <ConfidenceBadge value={q.confidence} verified={q.verified} />
                   {q.paper && (
@@ -222,9 +223,7 @@ const PYQPanel = ({ chapterTitle, transcript }: Props) => {
                   <ChevronDown className={cn("h-3 w-3 transition-transform", revealed[i] && "rotate-180")} />
                 </button>
                 {revealed[i] && (
-                  <p className="text-xs text-foreground/80 bg-background/60 p-2.5 rounded-lg border border-foreground/[0.07] whitespace-pre-wrap animate-fade-in">
-                    {q.answer}
-                  </p>
+                  <MathText as="div" className="text-xs text-foreground/80 bg-background/60 p-2.5 rounded-lg border border-foreground/[0.07] whitespace-pre-wrap animate-fade-in" text={q.answer} />
                 )}
               </div>
             ))}

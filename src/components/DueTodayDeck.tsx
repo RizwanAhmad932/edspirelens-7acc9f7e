@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import MathText from "@/components/MathText";
 import { Layers, RotateCcw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +65,7 @@ const DueTodayDeck = ({ className }: { className?: string }) => {
             <p className="text-[9px] font-mono-hud uppercase tracking-wider text-muted-foreground mb-2">
               {flipped ? "Answer" : card.topic || card.deck} · tap to {flipped ? "see question" : "flip"}
             </p>
-            <p className="text-sm whitespace-pre-wrap">{flipped ? card.back : card.front}</p>
+            <MathText as="p" className="text-sm whitespace-pre-wrap" text={flipped ? card.back : card.front} />
           </button>
           {flipped ? (
             <div className="grid grid-cols-4 gap-2">

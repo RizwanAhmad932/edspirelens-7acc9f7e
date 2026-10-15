@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MathText from "@/components/MathText";
 import { FileText, Clock, Search } from "lucide-react";
 import { TranscriptSegment } from "@/lib/mockData";
 import { PanelHeader, ExportButton } from "@/components/panel/PanelFrame";
@@ -57,7 +58,7 @@ const NotesPanel = ({ notes, transcript, chapterTitle = "Chapter" }: NotesPanelP
                 className="relative rounded-xl border border-foreground/[0.07] bg-secondary/25 p-3 pl-4 transition-colors hover:border-accent/35"
               >
                 <span className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full bg-accent/40" />
-                <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap">{note}</p>
+                <MathText as="p" className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap" text={note} />
               </div>
             ))
           ) : (

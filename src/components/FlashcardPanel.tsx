@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import MathText from "@/components/MathText";
 import { ChevronLeft, ChevronRight, RotateCcw, Loader2, Check, X, Zap, Layers, Shuffle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PanelHeader, ExportButton, HudProgress } from "@/components/panel/PanelFrame";
@@ -168,7 +169,7 @@ const FlashcardPanel = ({ flashcards, loading, deckId }: FlashcardPanelProps) =>
           >
             <div className="absolute inset-0 [backface-visibility:hidden] rounded-2xl border border-accent/25 bg-secondary/30 p-5 flex flex-col items-center justify-center text-center gap-3 scan-lines">
               <span className="hud-label">Question</span>
-              <p className="text-sm font-medium text-foreground leading-relaxed">{card.front}</p>
+              <MathText as="p" className="text-sm font-medium text-foreground leading-relaxed" text={card.front} />
               <div className="flex items-center gap-1.5">
                 {card.difficulty && (
                   <span className="text-[9px] font-mono-hud uppercase px-2 py-0.5 rounded-full border border-foreground/10 text-muted-foreground">
@@ -180,7 +181,7 @@ const FlashcardPanel = ({ flashcards, loading, deckId }: FlashcardPanelProps) =>
             </div>
             <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl border border-success/30 bg-success/[0.07] p-5 flex flex-col items-center justify-center text-center gap-2">
               <span className="hud-label">Answer</span>
-              <p className="text-sm font-medium text-foreground leading-relaxed">{card.back}</p>
+              <MathText as="p" className="text-sm font-medium text-foreground leading-relaxed" text={card.back} />
             </div>
           </div>
         </button>
