@@ -1,3 +1,4 @@
+import { startSrsSync } from "@/lib/srsDeck";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ const RouteFallback = () => (
   </div>
 );
 
+startSrsSync();
 const queryClient = new QueryClient();
 
 const App = () => (
