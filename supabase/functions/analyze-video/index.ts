@@ -229,7 +229,7 @@ GLOBAL QUALITY CONTRACT (applies to everything you produce):
 - ROLE: elite academic subject-matter expert for advanced curricula and competitive exams (Board/AP/IB/JEE/NEET/UPSC standard).
 - ACCURACY: 100% technical and factual accuracy. Zero hallucination — no invented data, years, statistics, citations or exam papers. Silently self-verify every number, formula, unit, derivation step and answer key before returning it; drop anything you cannot verify.
 - DEPTH: go beyond definitions. Where relevant add high-yield exam insight, the decisive step of a derivation, the common student misconception, and a practical application or mnemonic — in one dense clause, not a paragraph.
-- NOTATION: standard LaTeX-style inline notation for maths, units and symbols (E = mc^2, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}). Exact SI units always.
+- NOTATION: wrap EVERY formula, symbol and unit in LaTeX delimiters — $...$ inline, $$...$$ for standalone equations — e.g. $E = mc^2$, $\\frac{dv}{dt}$, $6.022 \\times 10^{23}$, $\\mathrm{m\\,s^{-1}}$. After any non-trivial formula add one plain-English line explaining what it means. Old style examples (E = mc^2, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}). Exact SI units always.
 - CATEGORISATION: every question carries its difficulty, question type (MCQ / Assertion-Reason / Case-Based / Short Answer / Long Analytical / Numerical) and explicit marking scheme where marks apply.
 - ANSWER KEYS: step-by-step model answers written in official marking-scheme style, showing where each mark is awarded.
 - STRUCTURE: clear hierarchy, precise headings, tight bullets, comparative contrasts where they aid recall.
@@ -666,7 +666,7 @@ ACCURACY RULES (non-negotiable):
 - Spread questions evenly across the whole video (start → middle → end).
 - Difficulty mix: ~25% easy (recall), ~40% medium (understanding/application), ~35% hard (HOTS, numerical, multi-step reasoning).
 - Include exam-authentic advanced formats inside the MCQ shell: Assertion-Reason (A/R with the standard four options), Case-Based / data-interpretation stems, and numerical stems with units.
-- Use LaTeX-style notation for maths, symbols and SI units (e.g. v = u + at, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}).
+- Wrap all maths, symbols and SI units in $...$ (inline) or $$...$$ (display) LaTeX delimiters and explain non-trivial formulas in one plain-English line (e.g. v = u + at, \\frac{dv}{dt}, 6.022 \\times 10^{23}, \\mathrm{m\\,s^{-1}}).
 - explanation: 1-2 dense sentences giving the decisive reasoning step or formula, plus the misconception the distractors target. No filler.
 - topic: precise sub-topic name. timestamp: transcript time (M:SS) where it was taught.
 - confidence: 0-100 honest self-rating that the question is transcript-grounded and the marked answer is definitely correct. Use <60 when the transcript was unclear on this point.` },
@@ -975,7 +975,7 @@ ${transcriptText.substring(0, 20000)}`,
         LOVABLE_API_KEY,
         [
           { role: "system", content: `You reconstruct the EXACT notes a teacher writes on the blackboard / slides during a lecture. Use the transcript's timestamps and verbal cues like "let me write...", "as you can see on the board", "the formula is...", "diagram of...", "step 1 / step 2", etc. Reproduce headings, formulas, diagrams (described in plain text) and bullet points VERBATIM as if a student copied them from the board. Preserve mathematical notation. Group by visible board section, not by every sentence.` },
-          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (preserve LaTeX-like math as plain text), optional diagram description, 2-6 bullet points exactly as the teacher would write them, and confidence (0-100: how certain you are this section reflects what was actually written/said — lower it when the transcript is unclear). Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
+          { role: "user", content: `Reconstruct the teacher's board / slide notes for "${chapterTitle}" from this timestamped transcript. Output 8-20 board sections in chronological order. Each section: a short heading, optional formula (LaTeX, no delimiters needed), optional diagram description, 2-6 bullet points exactly as the teacher would write them, and confidence (0-100: how certain you are this section reflects what was actually written/said — lower it when the transcript is unclear). Do NOT add textbook content the teacher did not mention.\n\nTranscript:\n${transcriptText.substring(0, 8000)}` }
         ],
         [{
           type: "function",
