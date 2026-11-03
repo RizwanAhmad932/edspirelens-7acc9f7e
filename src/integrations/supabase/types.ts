@@ -517,6 +517,27 @@ export type Database = {
         }
         Relationships: []
       }
+      srs_cards: {
+        Row: {
+          card_id: string
+          data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_id: string
+          data: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_challenges: {
         Row: {
           challenge_id: string
