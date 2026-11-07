@@ -110,6 +110,9 @@
   button:has(svg.animate-spin),
   [role="button"]:has(svg.animate-spin) {
     cursor: progress;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
   }
 
   html {
