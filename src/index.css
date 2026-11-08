@@ -109,7 +109,8 @@
 
   button:not(:disabled):hover,
   [role="button"]:not([aria-disabled="true"]):hover {
-    transform: translateY(-1px);
+    transform: translateY(-1px) scale(1.015);
+    box-shadow: 0 5px 16px hsl(var(--primary) / 0.16);
   }
 
   button:has(svg.animate-spin),
@@ -306,13 +307,13 @@
   }
 
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
   }
 
   @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.97); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; transform: scale(0.96); filter: blur(3px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
   }
 
   @keyframes skeleton-sweep {
@@ -339,7 +340,7 @@
   }
 
   .motion-surface:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px) scale(1.004);
     border-color: hsl(var(--accent) / 0.32);
     box-shadow: var(--shadow-card);
   }
@@ -382,6 +383,13 @@
     from { background-position: 120% 0; }
     to { background-position: -120% 0; }
   }
+
+  .button-interaction svg {
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .button-interaction:hover svg {
+    transform: scale(1.08);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -406,8 +414,23 @@
 
   .animate-fade-in,
   .animate-scale-in,
-  .skeleton-shimmer {
+  .skeleton-shimmer,
+  .animate-slide-up,
+  .animate-shimmer,
+  .animate-float,
+  .animate-glow-pulse,
+  .festival-motif,
+  .mascot-float,
+  .mascot-eyes,
+  .scanline::after,
+  button:has(svg.animate-spin)::after,
+  [role="button"]:has(svg.animate-spin)::after {
     animation: none !important;
+  }
+
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
