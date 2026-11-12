@@ -11,7 +11,11 @@ export function toMathSegments(input: string, forceFormula = false): MathSegment
   const text = String(input ?? "");
   if (forceFormula) {
     return text.split("\n").flatMap((line, index, lines) => {
-      const parts: MathSegment[] = line.trim() ? [{ type: "math", value: line.trim(), display: true }] : [];
+      const trimmed = line.trim();
+      const delimited = trimmed ? toMathSegments(trimmed) : [];
+      const parts: MathSegment[] = trimmed
+        ? delimited.some((segment) => segment.type === "math") ? delimited : [{ type: "math", value: trimmed, display: true }]
+        : [];
       if (index < lines.length - 1) parts.push({ type: "text", value: "\n" });
       return parts;
     });
