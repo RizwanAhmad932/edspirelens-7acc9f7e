@@ -25,4 +25,12 @@ describe("toMathSegments", () => {
       { type: "math", value: "E=mc^2", display: true },
     ]);
   });
+
+  it("keeps already-delimited math as math in raw-formula mode", () => {
+    expect(toMathSegments("$E=mc^2$ and $$F=ma$$", true)).toEqual([
+      { type: "math", value: "E=mc^2", display: false },
+      { type: "text", value: " and " },
+      { type: "math", value: "F=ma", display: true },
+    ]);
+  });
 });
