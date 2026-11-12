@@ -1,4 +1,5 @@
-import { exportDocPdf, DocSection } from "@/lib/exportDoc";
+import type { DocSection } from "@/lib/exportDoc";
+import { exportCramKitPdf } from "@/lib/cramKitPdf";
 import type { QuizQuestion, Flashcard } from "@/lib/mockData";
 
 /** Scan localStorage for any cached PYQs / short notes generated for this chapter. */
@@ -46,7 +47,7 @@ export async function downloadCramKit(o: {
       })),
     },
   ];
-  await exportDocPdf({
+  await exportCramKitPdf({
     title: `Cram Kit: ${o.title}`,
     subtitle: "Edspire Lens - complete chapter revision booklet",
     sections: sections.filter((s) => s.items.length > 0),
